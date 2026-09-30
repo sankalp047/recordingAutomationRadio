@@ -16,6 +16,7 @@ redeploy therefore costs seconds, not the current hour.
 import os, re, signal, subprocess, sys, threading, time, urllib.request, json
 import datetime as dt
 import pathlib
+import concurrent.futures as cf
 from zoneinfo import ZoneInfo
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
@@ -119,7 +120,7 @@ class Recorder:
             self.codec = probe_codec(self.url)
             if self.codec is None:
                 self.fails += 1
-                self.next_try = time.time() + min(300, 15 * self.fails)
+                self.next_try = time.time() + min(30, 5 * self.fails)
                 log(f"{self.station}: probe failed (retry {int(self.next_try-time.time())}s)")
                 return
         cont = container_for(self.codec)
@@ -152,20 +153,42 @@ class Recorder:
         self.proc = None
         if in_window() and rc != 0:
             self.fails += 1
-            self.next_try = time.time() + min(300, 15 * self.fails)
+            self.next_try = time.time() + min(30, 5 * self.fails)
             log(f"{self.station}: ffmpeg exited rc={rc}, retry in "
                 f"{int(self.next_try - time.time())}s")
         elif rc == 0:
             self.fails = 0
 
-    def stop(self):
+    def stop(self, timeout=20):
+        """Stop and wait. Used when the window closes, where time is not tight."""
+        self.signal_stop()
+        self.await_stop(time.time() + timeout)
+
+    def signal_stop(self):
+        """Ask ffmpeg to exit, without waiting. ffmpeg finalises the current
+        segment on SIGTERM, so the partial file is still valid."""
         if self.running():
             log(f"{self.station}: stopping")
             self.proc.terminate()
+
+    def await_stop(self, deadline):
+        """Wait for exit until a SHARED deadline, then kill.
+
+        Shutdown is signalled to every station first and waited on against one
+        deadline, rather than up to 20s each in turn: Render allows about 30
+        seconds between SIGTERM and SIGKILL, and four sequential waits can
+        spend all of it before a single byte is uploaded."""
+        if self.proc is None:
+            return
+        try:
+            self.proc.wait(timeout=max(0.1, deadline - time.time()))
+        except subprocess.TimeoutExpired:
+            log(f"{self.station}: did not exit, killing")
+            self.proc.kill()
             try:
-                self.proc.wait(timeout=20)
+                self.proc.wait(timeout=2)
             except subprocess.TimeoutExpired:
-                self.proc.kill()
+                pass
         self.proc = None
 
 # ---------------------------------------------------------------- uploads
@@ -196,52 +219,65 @@ def transcode(src: pathlib.Path, dst: pathlib.Path):
         capture_output=True, text=True)
     return r.returncode == 0, r.stderr.strip()
 
+def _handle_segment(f, drain):
+    """Transcode one segment and upload it. Returns True on success."""
+    m = SEG_RE.match(f.name)
+    if not m:
+        log("skip unparseable:", f.name)
+        return None
+    station, day, hms, _ = m.groups()
+    size = f.stat().st_size
+    if size < 100_000 and not drain:        # a stub from a failed connect
+        log(f"skip runt {f.name} ({size} B)")
+        f.unlink(missing_ok=True)
+        return None
+    if size < 2000:                         # nothing decodable, even draining
+        log(f"skip empty {f.name} ({size} B)")
+        f.unlink(missing_ok=True)
+        return None
+
+    qa_name = f"{station}_{day}_{hms}_CT.{C.QA_EXT}"
+    qa_tmp = C.WORK_DIR / "tmp" / qa_name
+    good, err = transcode(f, qa_tmp)
+    if not good:
+        log(f"FAIL transcode {f.name}: {err[:200]}")
+        qa_tmp.unlink(missing_ok=True)
+        return False
+    try:
+        storage.upload(qa_tmp, storage.key_for("qa", station, day, qa_name))
+        # The raw copy is a 48-hour convenience and is ~8x larger than the QA
+        # file. While draining we are racing a SIGKILL, so the QA audio - the
+        # thing with three years of retention - goes up and raw is skipped.
+        if C.KEEP_RAW and not drain:
+            ct = "audio/aac" if f.suffix == ".aac" else "audio/mpeg"
+            storage.upload(f, storage.key_for("raw", station, day, f.name), ct)
+    except Exception as e:
+        log(f"FAIL upload {qa_name}: {e}")
+        qa_tmp.unlink(missing_ok=True)
+        return False
+    qa_size = qa_tmp.stat().st_size
+    qa_tmp.unlink(missing_ok=True)
+    f.unlink(missing_ok=True)
+    log(f"OK {qa_name} ({size//1024} KB -> {qa_size//1024} KB)")
+    return True
+
+
 def process_once(drain=False):
     """Transcode + upload every closed segment. Anything that fails is left in
-    the spool and retried on the next pass."""
+    the spool and retried on the next pass.
+
+    Segments are handled concurrently: on shutdown there is one open segment
+    per station and only seconds to save them, and doing four in series does
+    not fit inside the platform's SIGTERM grace period."""
     segs = closed_segments(drain)
     if not segs:
         return 0, 0
     C.WORK_DIR.joinpath("tmp").mkdir(parents=True, exist_ok=True)
-    ok = fail = 0
-    for f in segs:
-        m = SEG_RE.match(f.name)
-        if not m:
-            log("skip unparseable:", f.name)
-            continue
-        station, day, hms, _ = m.groups()
-        size = f.stat().st_size
-        if size < 100_000 and not drain:       # a stub from a failed connect
-            log(f"skip runt {f.name} ({size} B)")
-            f.unlink(missing_ok=True)
-            continue
-        if size < 2000:                        # nothing decodable, even draining
-            log(f"skip empty {f.name} ({size} B)")
-            f.unlink(missing_ok=True)
-            continue
-        qa_name = f"{station}_{day}_{hms}_CT.{C.QA_EXT}"
-        qa_tmp = C.WORK_DIR / "tmp" / qa_name
-        good, err = transcode(f, qa_tmp)
-        if not good:
-            log(f"FAIL transcode {f.name}: {err[:200]}")
-            qa_tmp.unlink(missing_ok=True)
-            fail += 1
-            continue
-        try:
-            storage.upload(qa_tmp, storage.key_for("qa", station, day, qa_name))
-            if C.KEEP_RAW:
-                ct = "audio/aac" if f.suffix == ".aac" else "audio/mpeg"
-                storage.upload(f, storage.key_for("raw", station, day, f.name), ct)
-        except Exception as e:
-            log(f"FAIL upload {qa_name}: {e}")
-            qa_tmp.unlink(missing_ok=True)
-            fail += 1
-            continue
-        qa_size = qa_tmp.stat().st_size
-        qa_tmp.unlink(missing_ok=True)
-        f.unlink(missing_ok=True)
-        ok += 1
-        log(f"OK {qa_name} ({size//1024} KB -> {qa_size//1024} KB)")
+    workers = min(len(segs), 8)
+    with cf.ThreadPoolExecutor(max_workers=workers) as ex:
+        results = list(ex.map(lambda f: _handle_segment(f, drain), segs))
+    ok = sum(1 for r in results if r is True)
+    fail = sum(1 for r in results if r is False)
     if fail:
         alert(f"Recorder: {fail} segment(s) failed",
               f"{fail} segment(s) could not be transcoded or uploaded. "
@@ -333,12 +369,20 @@ def main():
                     log("gapcheck error:", e)
         _stop.wait(10)
 
+    # Render allows roughly 30s between SIGTERM and SIGKILL. Signal every
+    # child at once, give them a short shared deadline, then spend what is
+    # left uploading rather than waiting.
+    t0 = time.time()
     log("stopping recorders")
     for r in recs:
-        r.stop()
-    log("final upload pass (draining spool)")
+        r.signal_stop()
+    deadline = time.time() + 5
+    for r in recs:
+        r.await_stop(deadline)
+    log(f"recorders stopped in {time.time()-t0:.1f}s; draining spool")
     try:
-        process_once(drain=True)
+        ok, fail = process_once(drain=True)
+        log(f"drain complete in {time.time()-t0:.1f}s: {ok} uploaded, {fail} failed")
     except Exception as e:
         log("final upload failed:", e)
     log("bye")

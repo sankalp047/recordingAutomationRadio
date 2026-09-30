@@ -2,6 +2,15 @@ name = "show-archive-api"
 main = "src/index.js"
 compatibility_date = "2025-09-01"
 
+# Custom domain on the funasia.net zone. custom_domain = true makes Cloudflare
+# create and manage the DNS record itself. Declaring a route also makes
+# workers_dev default to false, so the API is reachable only here - no
+# permanent account-wide workers.dev subdomain, and nothing on a hostname
+# corporate DNS filters tend to block.
+routes = [
+  { pattern = "radio-api.funasia.net", custom_domain = true }
+]
+
 # Native R2 binding: the Worker reads the bucket directly, with no access keys
 # and no egress charge.
 [[r2_buckets]]
