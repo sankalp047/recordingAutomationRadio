@@ -14,3 +14,10 @@ api/.api-token
 
 # integration notes - keep out of git
 API.md
+
+# macOS app: project.yml is the source of truth, the xcodeproj is generated
+macos/.build/
+macos/*.xcodeproj
+macos/DerivedData/
+**/xcuserdata/
+.DS_Store
