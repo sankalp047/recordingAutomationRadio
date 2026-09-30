@@ -1,0 +1,34 @@
+{
+  "Rules": [
+    {
+      "ID": "expire-qa-recordings",
+      "Filter": {
+        "Prefix": "qa/"
+      },
+      "Status": "Enabled",
+      "Expiration": {
+        "Days": 1095
+      }
+    },
+    {
+      "ID": "expire-raw-safety-copies",
+      "Filter": {
+        "Prefix": "raw/"
+      },
+      "Status": "Enabled",
+      "Expiration": {
+        "Days": 2
+      }
+    },
+    {
+      "ID": "abort-stuck-multipart",
+      "Filter": {
+        "Prefix": ""
+      },
+      "Status": "Enabled",
+      "AbortIncompleteMultipartUpload": {
+        "DaysAfterInitiation": 1
+      }
+    }
+  ]
+}

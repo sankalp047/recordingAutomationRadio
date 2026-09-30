@@ -1,0 +1,11 @@
+{
+  "name": "show-archive-api",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "test": "node test/coverage.test.js"
+  },
+  "devDependencies": { "wrangler": "^3.90.0" }
+}

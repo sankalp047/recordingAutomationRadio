@@ -1,0 +1,16 @@
+name = "show-archive-api"
+main = "src/index.js"
+compatibility_date = "2025-09-01"
+
+# Native R2 binding: the Worker reads the bucket directly, with no access keys
+# and no egress charge.
+[[r2_buckets]]
+binding = "ARCHIVE"
+bucket_name = "show-archive"
+
+[vars]
+STATIONS = "sangam,funasia,vanakkam,apnapunjab"
+
+# API_TOKEN is a secret, not a var:
+#   npx wrangler secret put API_TOKEN
+# If it is unset the API is open - fine for a first smoke test, not for real use.

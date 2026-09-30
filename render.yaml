@@ -1,0 +1,40 @@
+# Render blueprint. The recorder is a Background Worker, not a Web Service:
+# it holds long-lived connections and serves no HTTP. The JSON API is a
+# Cloudflare Worker instead (see api/) - it sits next to the bucket, reads it
+# through a native binding, and costs nothing on the free tier.
+services:
+  - type: worker
+    name: show-recorder
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: starter          # 0.5 CPU / 512 MB - ample: -c copy is near-idle
+    autoDeploy: false      # deploy on purpose, outside the broadcast window
+    envVars:
+      - key: TZ
+        value: America/Chicago
+      - key: TZ_NAME
+        value: America/Chicago
+      - key: REC_START
+        value: "06:00"
+      - key: REC_END
+        value: "00:00"
+      - key: QA_BITRATE
+        value: 16k
+      - key: QA_SAMPLERATE
+        value: "16000"
+      - key: SEGMENT_SECONDS
+        value: "3600"
+      - key: UPLOAD_INTERVAL
+        value: "300"
+      - key: KEEP_RAW
+        value: "1"
+      - key: R2_BUCKET
+        value: show-archive
+      - key: R2_ACCOUNT_ID
+        sync: false        # set in the Render dashboard
+      - key: R2_ACCESS_KEY_ID
+        sync: false
+      - key: R2_SECRET_ACCESS_KEY
+        sync: false
+      - key: ALERT_WEBHOOK
+        sync: false
