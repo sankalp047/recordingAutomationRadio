@@ -11,3 +11,6 @@ node_modules/
 .dev.vars
 *.token
 api/.api-token
+
+# integration notes - keep out of git
+API.md
