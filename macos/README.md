@@ -23,6 +23,15 @@ Settings (gear icon) needs two values:
 **Test connection** verifies both before saving. The token is stored in the
 Keychain, not in `UserDefaults` or on disk.
 
+**Enter the token through this window — do not pre-load it with `security
+add-generic-password`.** macOS attaches an ACL to every keychain item naming
+which program may read it, and an item created by the `security` tool trusts
+only that tool. The app then either gets nothing back, or the user sees a
+"RadioQA wants to access key ... enter the login keychain password" prompt. An
+empty token reaches the API as `Bearer ` and comes back 401, which looks like a
+bad token rather than a permissions problem. Saving from this window makes the
+app the owner of the item, and it is then read silently forever.
+
 ## What it shows
 
 **Coverage grid** — stations down, broadcast hours 06:00–24:00 across. Green is
