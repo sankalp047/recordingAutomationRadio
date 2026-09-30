@@ -114,3 +114,91 @@ extension StationsResponse.QAProfile {
         case sampleRate = "sample_rate"
     }
 }
+
+// MARK: - /stats
+
+struct StatsResponse: Codable {
+    let from: String
+    let to: String
+    let days: Int
+    let stations: [StationStats]
+}
+
+struct StationStats: Codable, Identifiable, Hashable {
+    let station: String
+    let days: [DayStat]
+    let summary: Summary
+    var id: String { station }
+
+    struct DayStat: Codable, Hashable, Identifiable {
+        let date: String
+        let complete: Bool
+        let hoursOK: Int
+        let hoursTotal: Int
+        let files: Int
+        let restarts: Int
+        let recordedSeconds: Int
+        let bytes: Int
+        let gaps: [Int]
+
+        var id: String { date }
+        var fraction: Double { hoursTotal == 0 ? 0 : Double(hoursOK) / Double(hoursTotal) }
+        var hasData: Bool { files > 0 }
+
+        enum CodingKeys: String, CodingKey {
+            case date, complete, files, restarts, gaps, bytes
+            case hoursOK = "hours_ok"
+            case hoursTotal = "hours_total"
+            case recordedSeconds = "recorded_seconds"
+        }
+    }
+
+    struct Summary: Codable, Hashable {
+        let daysCounted: Int
+        let daysComplete: Int
+        let totalHoursOK: Int
+        let totalHoursExpected: Int
+        let totalFiles: Int
+        let totalRestarts: Int
+        let totalBytes: Int
+        let reliability: Double
+
+        enum CodingKeys: String, CodingKey {
+            case reliability
+            case daysCounted = "days_counted"
+            case daysComplete = "days_complete"
+            case totalHoursOK = "total_hours_ok"
+            case totalHoursExpected = "total_hours_expected"
+            case totalFiles = "total_files"
+            case totalRestarts = "total_restarts"
+            case totalBytes = "total_bytes"
+        }
+    }
+}
+
+/// Plain-language station names. The API uses short ids; people do not.
+enum StationName {
+    private static let map = [
+        "sangam": "Radio Sangam",
+        "funasia": "FunAsia",
+        "vanakkam": "Vanakkam FM",
+        "apnapunjab": "Apna Punjab",
+    ]
+    static func pretty(_ id: String) -> String { map[id] ?? id.capitalized }
+}
+
+/// "6 AM" reads better than "06" for people who are not engineers.
+enum HourLabel {
+    static func short(_ h: Int) -> String {
+        let hour = h % 24
+        if hour == 0 { return "12 AM" }
+        if hour == 12 { return "12 PM" }
+        return hour < 12 ? "\(hour) AM" : "\(hour - 12) PM"
+    }
+    static func compact(_ h: Int) -> String {
+        let hour = h % 24
+        if hour == 0 { return "12a" }
+        if hour == 12 { return "12p" }
+        return hour < 12 ? "\(hour)a" : "\(hour - 12)p"
+    }
+}

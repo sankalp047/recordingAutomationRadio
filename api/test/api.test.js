@@ -120,5 +120,34 @@ await t("/audio unencoded ../ is normalised away by URL", async () =>
   eq((await call("/audio/../../secret", AUTH)).status, 404));
 await t("unknown endpoint 404", async () => eq((await call("/nope", AUTH)).status, 404));
 
+
+
+// ---- /stats ----
+await t("/stats returns per-day history", async () => {
+  const b = await (await call("/stats?days=3&to=2026-09-30&station=funasia", AUTH)).json();
+  eq(b.to, "2026-09-30");
+  eq(b.stations.length, 1);
+  const s = b.stations[0];
+  eq(s.days.length, 3, "one entry per day");
+  eq(s.days[2].date, "2026-09-30");
+  eq(s.days[2].hours_ok, 18, "seeded day is complete");
+  eq(s.days[0].files, 0, "unseeded day empty");
+  ok(s.summary.reliability > 0 && s.summary.reliability <= 1, `reliability ${s.summary.reliability}`);
+});
+await t("/stats counts all stations by default", async () => {
+  const b = await (await call("/stats?days=1&to=2026-09-30", AUTH)).json();
+  eq(b.stations.length, 4);
+  const sangam = b.stations.find(s => s.station === "sangam");
+  eq(sangam.days[0].hours_ok, 16, "sangam is missing 2 hours");
+  eq(sangam.days[0].gaps, [22, 23]);
+});
+await t("/stats caps the window", async () => {
+  const b = await (await call("/stats?days=999&to=2026-09-30&station=funasia", AUTH)).json();
+  ok(b.days <= 92, `days capped, got ${b.days}`);
+});
+await t("/stats requires auth", async () => eq((await call("/stats?days=1")).status, 401));
+await t("/stats rejects a bad date", async () =>
+  eq((await call("/stats?to=nonsense", AUTH)).status, 400));
+
 console.log(`\n${fails ? fails + " FAILED" : "all passed"}`);
 process.exit(fails ? 1 : 0);

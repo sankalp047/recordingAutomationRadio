@@ -3,15 +3,18 @@ import Foundation
 enum APIError: LocalizedError {
     case notConfigured
     case unauthorized
+    case needsSignIn
     case http(Int, String)
     case transport(String)
 
     var errorDescription: String? {
         switch self {
-        case .notConfigured:      return "Set the server URL and API token in Settings."
-        case .unauthorized:       return "The API rejected the token (401). Check it in Settings."
-        case .http(let c, let m): return "Server returned \(c)\(m.isEmpty ? "" : ": \(m)")"
-        case .transport(let m):   return m
+        case .notConfigured: return "Add the server address and access key in Settings."
+        case .unauthorized:  return "The server rejected the access key. Check it in Settings."
+        case .needsSignIn:   return "Sign in with your funasia.net account to continue."
+        case .http(let c, let m):
+            return "The server returned an error (\(c))\(m.isEmpty ? "" : ": \(m)")"
+        case .transport(let m): return m
         }
     }
 }
@@ -44,6 +47,15 @@ struct APIClient {
         catch { throw APIError.transport(error.localizedDescription) }
 
         let code = (resp as? HTTPURLResponse)?.statusCode ?? 0
+        // Cloudflare Access answers an unauthenticated request with its own
+        // login page rather than JSON, so an HTML body means "sign in", not
+        // "bad token".
+        let ctype = (resp as? HTTPURLResponse)?
+            .value(forHTTPHeaderField: "Content-Type")?.lowercased() ?? ""
+        let host = (resp as? HTTPURLResponse)?.url?.host ?? ""
+        if ctype.contains("text/html") || host.contains("cloudflareaccess.com") {
+            throw APIError.needsSignIn
+        }
         if code == 401 { throw APIError.unauthorized }
         guard (200..<300).contains(code) else {
             let msg = (try? JSONSerialization.jsonObject(with: data) as? [String: Any])
@@ -58,6 +70,12 @@ struct APIClient {
 
     func coverage(date: String) async throws -> CoverageResponse {
         try await get("/coverage", [.init(name: "date", value: date)])
+    }
+
+    func stats(days: Int, station: String? = nil) async throws -> StatsResponse {
+        var q = [URLQueryItem(name: "days", value: String(days))]
+        if let s = station { q.append(.init(name: "station", value: s)) }
+        return try await get("/stats", q)
     }
 
     func recordings(date: String, station: String?) async throws -> RecordingsResponse {

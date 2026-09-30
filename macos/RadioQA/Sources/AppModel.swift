@@ -1,45 +1,86 @@
 import Foundation
 import Observation
 
+enum Screen: String, CaseIterable, Identifiable {
+    case today, timeline, stations, health
+    var id: String { rawValue }
+    var title: String {
+        switch self {
+        case .today:    return "Today"
+        case .timeline: return "Hour by hour"
+        case .stations: return "Stations"
+        case .health:   return "History"
+        }
+    }
+    var icon: String {
+        switch self {
+        case .today:    return "checkmark.seal"
+        case .timeline: return "clock"
+        case .stations: return "dot.radiowaves.left.and.right"
+        case .health:   return "chart.bar"
+        }
+    }
+    var blurb: String {
+        switch self {
+        case .today:    return "Did everything record?"
+        case .timeline: return "Every hour, one row per station"
+        case .stations: return "One station at a time"
+        case .health:   return "How it has been doing"
+        }
+    }
+}
+
 @MainActor
 @Observable
 final class AppModel {
-    // MARK: settings
-    var baseURL: String {
-        didSet { UserDefaults.standard.set(baseURL, forKey: "baseURL") }
-    }
-    var token: String {
-        didSet { Keychain.set(token, for: "apiToken") }
-    }
+    // settings
+    var baseURL: String { didSet { UserDefaults.standard.set(baseURL, forKey: "baseURL") } }
+    var token: String { didSet { Keychain.set(token, for: "apiToken") } }
     var isConfigured: Bool { !baseURL.isEmpty && !token.isEmpty }
 
-    // MARK: state
+    // navigation
+    var screen: Screen = .today
+    var focusedStation: String?
+
+    // data
     var date = Date()
     var coverage: CoverageResponse?
     var recordings: [Recording] = []
+    var stats: StatsResponse?
     var stations: [String] = ["sangam", "funasia", "vanakkam", "apnapunjab"]
     var startHour = 6
     var endHour = 24
+    var historyDays = 14
 
     var loading = false
     var error: String?
+    var needsSignIn = false
     var selected: Recording?
 
     private var client: APIClient { APIClient(baseURL: baseURL, token: token) }
 
     init() {
-        baseURL = UserDefaults.standard.string(forKey: "baseURL")
-            ?? "https://radio-api.funasia.net"
+        baseURL = UserDefaults.standard.string(forKey: "baseURL") ?? "https://radio-api.funasia.net"
         token = Keychain.get("apiToken") ?? ""
     }
 
     var dateString: String {
         let f = DateFormatter()
         f.dateFormat = "yyyy-MM-dd"
-        // The API works in broadcast days, which are America/Chicago dates.
         f.timeZone = TimeZone(identifier: "America/Chicago")
         return f.string(from: date)
     }
+
+    var friendlyDate: String {
+        let cal = Calendar.current
+        if cal.isDateInToday(date) { return "Today" }
+        if cal.isDateInYesterday(date) { return "Yesterday" }
+        let f = DateFormatter()
+        f.dateFormat = "EEEE d MMMM"
+        return f.string(from: date)
+    }
+
+    var isToday: Bool { Calendar.current.isDateInToday(date) }
 
     func shiftDay(_ n: Int) {
         date = Calendar.current.date(byAdding: .day, value: n, to: date) ?? date
@@ -50,8 +91,8 @@ final class AppModel {
         guard isConfigured else { error = APIError.notConfigured.errorDescription; return }
         loading = true
         error = nil
+        needsSignIn = false
         defer { loading = false }
-
         let day = dateString
         do {
             async let cov = client.coverage(date: day)
@@ -62,35 +103,77 @@ final class AppModel {
             startHour = c.window.startHour
             endHour = c.window.endHour
             if !c.stations.isEmpty { stations = c.stations.map(\.station) }
+        } catch let e as APIError {
+            if case .needsSignIn = e { needsSignIn = true }
+            error = e.errorDescription
+            coverage = nil; recordings = []
         } catch {
-            self.error = (error as? APIError)?.errorDescription ?? error.localizedDescription
-            coverage = nil
-            recordings = []
+            self.error = error.localizedDescription
+            coverage = nil; recordings = []
         }
     }
 
-    func loadStations() async {
+    func loadStats() async {
         guard isConfigured else { return }
-        if let s = try? await client.stations() { stations = s.stations }
+        do { stats = try await client.stats(days: historyDays) }
+        catch let e as APIError {
+            if case .needsSignIn = e { needsSignIn = true }
+            error = e.errorDescription
+        } catch { self.error = error.localizedDescription }
     }
 
-    /// Segments overlapping a given station-hour, in start order.
+    // MARK: derived
+
+    func cov(_ station: String) -> StationCoverage? {
+        coverage?.stations.first { $0.station == station }
+    }
+
+    /// Segments overlapping a station-hour, in start order.
     func segments(station: String, hour: Int) -> [Recording] {
         recordings.filter { r in
             guard r.station == station else { return false }
-            let start = Double(r.startHour) * 3600
-                + Double(Int(r.startLocal.dropFirst(3).prefix(2)) ?? 0) * 60
-            let end = start + r.durationSeconds
-            return start < Double(hour + 1) * 3600 && end > Double(hour) * 3600
+            let mins = Double(Int(r.startLocal.dropFirst(3).prefix(2)) ?? 0)
+            let start = Double(r.startHour) * 3600 + mins * 60
+            return start < Double(hour + 1) * 3600 && start + r.durationSeconds > Double(hour) * 3600
         }
         .sorted { $0.startLocal < $1.startLocal }
+    }
+
+    func recordings(for station: String) -> [Recording] {
+        recordings.filter { $0.station == station }.sorted { $0.startLocal < $1.startLocal }
+    }
+
+    var stationsComplete: Int { coverage?.stations.filter(\.complete).count ?? 0 }
+    var stationsTotal: Int { coverage?.stations.count ?? stations.count }
+    var allComplete: Bool { coverage?.complete ?? false }
+
+    /// Headline sentence. Deliberately plain English, no percentages.
+    var headline: String {
+        guard let c = coverage else { return "No information yet" }
+        if isToday { return "Recording is in progress" }
+        if c.complete { return "Everything recorded" }
+        let bad = c.stations.filter { !$0.complete }
+        if bad.count == 1 {
+            return "\(StationName.pretty(bad[0].station)) has gaps"
+        }
+        return "\(bad.count) stations have gaps"
+    }
+
+    var subhead: String {
+        guard let c = coverage else { return "" }
+        let missing = c.stations.reduce(0) { $0 + ($1.hoursTotal - $1.hoursOK) }
+        if isToday {
+            let done = c.stations.reduce(0) { $0 + $1.hoursOK }
+            return "\(done) complete \(done == 1 ? "hour" : "hours") recorded so far today."
+        }
+        if missing == 0 { return "All \(c.stations.count) stations recorded every hour from 6 AM to midnight." }
+        return "\(missing) \(missing == 1 ? "hour is" : "hours are") missing or incomplete."
     }
 
     func playbackURL(for r: Recording) -> URL? { client.playbackURL(for: r) }
 
     var totalSize: String {
-        ByteCountFormatter.string(
-            fromByteCount: Int64(recordings.reduce(0) { $0 + $1.sizeBytes }),
-            countStyle: .file)
+        ByteCountFormatter.string(fromByteCount: Int64(recordings.reduce(0) { $0 + $1.sizeBytes }),
+                                  countStyle: .file)
     }
 }

@@ -192,6 +192,7 @@ export default {
           "/stations": "configured stations",
           "/recordings": "?station=&date=|from=&to=&limit= - recording metadata",
           "/coverage": "?date=&station= - per-hour completeness for QA",
+          "/stats": "?days=&to=&station= - per-day history, reliability and restarts",
           "/audio/<id>": "stream one recording (supports Range)",
         },
       });
@@ -264,6 +265,68 @@ export default {
         complete: results.every((r) => r.complete),
         stations: results,
       });
+    }
+
+
+    if (path === "/stats") {
+      const to = url.searchParams.get("to") || new Intl.DateTimeFormat("en-CA", { timeZone: TZ }).format(new Date());
+      const days = Math.min(parseInt(url.searchParams.get("days") || "14", 10), 92);
+      if (!isDate(to)) return err(400, "bad to", "expected YYYY-MM-DD");
+      const from = new Date(`${to}T00:00:00Z`);
+      from.setUTCDate(from.getUTCDate() - (days - 1));
+      const fromStr = from.toISOString().slice(0, 10);
+      const stations = url.searchParams.get("station")
+        ? [url.searchParams.get("station")] : stationList(env);
+
+      const out = [];
+      for (const st of stations) {
+        // one listing covers the whole range; bucket in memory by day
+        const objs = await listRange(env.ARCHIVE, st, fromStr, to);
+        const byDay = new Map();
+        for (const o of objs) {
+          const m = NAME_RE.exec(o.key.split("/").pop());
+          if (!m) continue;
+          if (!byDay.has(m[2])) byDay.set(m[2], []);
+          byDay.get(m[2]).push(o);
+        }
+        const daily = [];
+        for (const d of daysBetween(fromStr, to)) {
+          const dayObjs = byDay.get(d) || [];
+          const c = coverage(dayObjs, st, d);
+          const secs = dayObjs.reduce((a, o) => a + o.size / QA_BYTES_PER_SEC, 0);
+          daily.push({
+            date: d,
+            complete: c.complete,
+            hours_ok: c.hours_ok,
+            hours_total: c.hours_total,
+            files: c.files,
+            // more files than hours means the recorder restarted mid-hour
+            restarts: Math.max(0, c.files - (c.hours_total - c.gaps.length)),
+            recorded_seconds: Math.round(secs),
+            bytes: dayObjs.reduce((a, o) => a + o.size, 0),
+            gaps: c.gaps.map((g) => g.hour),
+          });
+        }
+        const withData = daily.filter((d) => d.files > 0);
+        out.push({
+          station: st,
+          days: daily,
+          summary: {
+            days_counted: withData.length,
+            days_complete: daily.filter((d) => d.complete).length,
+            total_hours_ok: daily.reduce((a, d) => a + d.hours_ok, 0),
+            total_hours_expected: daily.reduce((a, d) => a + d.hours_total, 0),
+            total_files: daily.reduce((a, d) => a + d.files, 0),
+            total_restarts: daily.reduce((a, d) => a + d.restarts, 0),
+            total_bytes: daily.reduce((a, d) => a + d.bytes, 0),
+            reliability: (() => {
+              const exp = daily.reduce((a, d) => a + d.hours_total, 0);
+              return exp ? Math.round((daily.reduce((a, d) => a + d.hours_ok, 0) / exp) * 1000) / 1000 : 0;
+            })(),
+          },
+        });
+      }
+      return json({ from: fromStr, to, days, timezone: TZ, stations: out });
     }
 
     if (path.startsWith("/audio/")) {
