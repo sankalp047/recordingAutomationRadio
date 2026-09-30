@@ -4,3 +4,10 @@ node_modules/
 .wrangler/
 .venv/
 *.log
+
+# secrets - never commit (this repo is public)
+.env
+.env.*
+.dev.vars
+*.token
+api/.api-token
