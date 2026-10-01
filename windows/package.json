@@ -1,7 +1,7 @@
 {
   "name": "pm-radio-logs",
   "productName": "PM Radio Logs",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Listen to and save the station recording archive",
   "main": "src/main.js",
   "private": true,
@@ -9,7 +9,8 @@
   "scripts": {
     "start": "electron .",
     "dist:win": "electron-builder --win --publish never",
-    "dist:win:portable": "electron-builder --win portable --publish never"
+    "dist:win:portable": "electron-builder --win portable --publish never",
+    "test": "electron test/cookie.test.js"
   },
   "devDependencies": {
     "electron": "^33.2.0",
@@ -18,12 +19,28 @@
   "build": {
     "appId": "net.funasia.pmradiologs",
     "productName": "PM Radio Logs",
-    "directories": { "output": "dist", "buildResources": "build" },
-    "files": ["src/**/*", "!**/*.map"],
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "src/**/*",
+      "!**/*.map"
+    ],
     "win": {
       "target": [
-        { "target": "nsis", "arch": ["x64"] },
-        { "target": "portable", "arch": ["x64"] }
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
       ],
       "icon": "build/icon.ico",
       "artifactName": "${productName}-${version}-${arch}.${ext}"
@@ -36,6 +53,8 @@
       "createStartMenuShortcut": true,
       "shortcutName": "PM Radio Logs"
     },
-    "portable": { "artifactName": "${productName}-${version}-portable.${ext}" }
+    "portable": {
+      "artifactName": "${productName}-${version}-portable.${ext}"
+    }
   }
 }

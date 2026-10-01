@@ -37,10 +37,23 @@ app.whenReady().then(() => {
 });
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
 
-/** Requests share the app session, so the Cloudflare Access cookie is sent. */
+/**
+ * Requests share the app session so the Cloudflare Access cookie is sent.
+ *
+ * useSessionCookies must be set explicitly: net.request defaults it to false,
+ * which sends no cookies at all. That looked exactly like a broken login - the
+ * sign-in succeeded and set the cookie, every call afterwards omitted it, and
+ * Access challenged again, so the app asked the user to sign in forever.
+ */
 function request(url, { method = 'GET', headers = {} } = {}) {
   return new Promise((resolve, reject) => {
-    const r = net.request({ method, url, session: session.defaultSession, redirect: 'follow' });
+    const r = net.request({
+      method, url,
+      session: session.defaultSession,
+      useSessionCookies: true,
+      credentials: 'include',
+      redirect: 'follow',
+    });
     for (const [k, v] of Object.entries(headers)) r.setHeader(k, v);
     const chunks = [];
     r.on('response', (res) => {
@@ -93,24 +106,36 @@ ipcMain.handle('api:get', async (_e, { base, pathname, query }) => {
 ipcMain.handle('auth:signIn', async (_e, base) => {
   return new Promise((resolve) => {
     const w = new BrowserWindow({
-      width: 560, height: 680, parent: win, modal: true, title: 'Sign in',
-      webPreferences: { contextIsolation: true, nodeIntegration: false },
+      width: 560, height: 700, parent: win, modal: true, title: 'Sign in',
+      webPreferences: {
+        contextIsolation: true,
+        nodeIntegration: false,
+        session: session.defaultSession,   // same jar the API calls read
+      },
     });
     w.setMenuBarVisibility(false);
     let settled = false;
+    let sawIdP = false;                    // did we actually reach a login page?
     const finish = (ok) => {
       if (settled) return;
       settled = true;
       resolve({ ok });
       if (!w.isDestroyed()) w.close();
     };
-    w.webContents.on('did-navigate', (_ev, url) => {
-      try {
-        const h = new URL(url).hostname;
-        // back on our own host means Access let the request through
-        if (h === new URL(base).hostname) finish(true);
-      } catch {}
-    });
+
+    const ourHost = new URL(base).hostname;
+    const check = async (url) => {
+      let h;
+      try { h = new URL(url).hostname; } catch { return; }
+      if (h !== ourHost) { sawIdP = true; return; }
+      // Back on our own host. Only trust it once an Access cookie exists -
+      // the very first navigation is also on our host, before any login.
+      const cookies = await session.defaultSession.cookies.get({ name: 'CF_Authorization' });
+      if (cookies.length) finish(true);
+      else if (!sawIdP) { /* initial load; wait for the redirect to Access */ }
+    };
+    w.webContents.on('did-navigate', (_ev, url) => { check(url); });
+    w.webContents.on('did-redirect-navigation', (_ev, url) => { check(url); });
     w.on('closed', () => { if (!settled) { settled = true; resolve({ ok: false }); } });
     w.loadURL(new URL('/health', base).toString());
   });
