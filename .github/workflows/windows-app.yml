@@ -1,0 +1,32 @@
+name: Build Windows app
+
+# Builds the installer and portable .exe on a real Windows runner, so a release
+# never depends on anyone's laptop. Artifacts are attached to the run.
+on:
+  push:
+    tags: ["win-v*"]
+    paths: ["windows/**", ".github/workflows/windows-app.yml"]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: windows
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: windows/package-lock.json
+      - run: npm ci
+      - run: npx electron-builder --win nsis portable --x64 --publish never
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PM-Radio-Logs-windows
+          path: |
+            windows/dist/*.exe
+            windows/dist/*.blockmap
+          if-no-files-found: error

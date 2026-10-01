@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="Content-Security-Policy"
+      content="default-src 'self'; img-src 'self' data:; media-src https:; style-src 'self' 'unsafe-inline'; script-src 'self'">
+<title>PM Radio Logs</title>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="brand">
+      <img id="brandLogo" src="logo.png" alt="" onerror="this.style.display='none'">
+      <div><div class="brand-name">PM Radio Logs</div><div class="brand-sub">Recording archive</div></div>
+    </div>
+    <nav id="nav">
+      <button class="nav-item active" data-screen="find">
+        <span class="nav-title">Find a recording</span>
+        <span class="nav-sub">Listen or save any hour</span>
+      </button>
+      <button class="nav-item" data-screen="status">
+        <span class="nav-title">Status</span>
+        <span class="nav-sub">Did everything record?</span>
+      </button>
+      <button class="nav-item" data-screen="history">
+        <span class="nav-title">History</span>
+        <span class="nav-sub">How it has been doing</span>
+      </button>
+    </nav>
+    <div class="sidebar-foot">
+      <div id="account" class="account"></div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <section id="screen-find" class="screen">
+      <div class="steps">
+        <div class="step">
+          <div class="step-label">1. Which station?</div>
+          <div id="stationRow" class="chip-row"></div>
+        </div>
+        <div class="step">
+          <div class="step-label">2. Which day?</div>
+          <div class="day-row">
+            <button id="prevDay" class="icon-btn" title="Previous day">&#8249;</button>
+            <input type="date" id="datePick" />
+            <button id="nextDay" class="icon-btn" title="Next day">&#8250;</button>
+            <span id="dayLabel" class="day-label"></span>
+            <button id="todayBtn" class="ghost-btn">Today</button>
+            <span class="spacer"></span>
+            <span id="saveProgress" class="progress"></span>
+            <button id="saveDay" class="ghost-btn">Save whole day</button>
+          </div>
+        </div>
+      </div>
+      <div class="step-label pad">3. Pick a time</div>
+      <div id="hourList" class="hour-list"></div>
+    </section>
+
+    <section id="screen-status" class="screen hidden">
+      <div id="statusBanner"></div>
+      <div class="step-label pad">Stations</div>
+      <div id="stationCards" class="cards"></div>
+    </section>
+
+    <section id="screen-history" class="screen hidden">
+      <div class="history-head">
+        <div class="step-label">How it has been doing</div>
+        <select id="historyDays">
+          <option value="7">Last 7 days</option>
+          <option value="14" selected>Last 14 days</option>
+          <option value="30">Last 30 days</option>
+          <option value="90">Last 90 days</option>
+        </select>
+      </div>
+      <div id="historyList"></div>
+    </section>
+
+    <div id="blocker" class="blocker hidden"></div>
+
+    <div id="player" class="player hidden">
+      <button id="playPause" class="icon-btn big">&#9654;</button>
+      <button id="back15" class="icon-btn" title="Back 15 seconds">&#8630;</button>
+      <button id="fwd15" class="icon-btn" title="Forward 15 seconds">&#8631;</button>
+      <div id="nowPlaying" class="now"></div>
+      <span id="curTime" class="time">0:00</span>
+      <input type="range" id="seek" value="0" min="0" max="100" step="0.1" />
+      <span id="durTime" class="time">0:00</span>
+      <button id="closePlayer" class="icon-btn" title="Close">&#10005;</button>
+    </div>
+    <audio id="audio"></audio>
+  </main>
+
+  <script src="renderer.js"></script>
+</body>
+</html>

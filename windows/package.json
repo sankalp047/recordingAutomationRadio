@@ -1,0 +1,41 @@
+{
+  "name": "pm-radio-logs",
+  "productName": "PM Radio Logs",
+  "version": "1.0.0",
+  "description": "Listen to and save the station recording archive",
+  "main": "src/main.js",
+  "private": true,
+  "author": "FunAsia",
+  "scripts": {
+    "start": "electron .",
+    "dist:win": "electron-builder --win --publish never",
+    "dist:win:portable": "electron-builder --win portable --publish never"
+  },
+  "devDependencies": {
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "net.funasia.pmradiologs",
+    "productName": "PM Radio Logs",
+    "directories": { "output": "dist", "buildResources": "build" },
+    "files": ["src/**/*", "!**/*.map"],
+    "win": {
+      "target": [
+        { "target": "nsis", "arch": ["x64"] },
+        { "target": "portable", "arch": ["x64"] }
+      ],
+      "icon": "build/icon.ico",
+      "artifactName": "${productName}-${version}-${arch}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "PM Radio Logs"
+    },
+    "portable": { "artifactName": "${productName}-${version}-portable.${ext}" }
+  }
+}

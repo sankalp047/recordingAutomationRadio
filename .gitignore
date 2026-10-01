@@ -23,3 +23,5 @@ macos/DerivedData/
 .DS_Store
 macos/dist/
 branding/logo.png
+windows/node_modules/
+windows/dist/
