@@ -17,8 +17,9 @@ targets:
     info:
       path: RadioQA/Info.plist
       properties:
-        CFBundleName: RadioQA
-        CFBundleDisplayName: Radio QA
+        CFBundleName: PM Radio Logs
+        CFBundleDisplayName: PM Radio Logs
+        CFBundleIconFile: AppIcon
         CFBundleShortVersionString: "1.0"
         CFBundleVersion: "1"
         LSMinimumSystemVersion: "14.0"

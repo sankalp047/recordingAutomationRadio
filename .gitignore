@@ -21,3 +21,5 @@ macos/*.xcodeproj
 macos/DerivedData/
 **/xcuserdata/
 .DS_Store
+macos/dist/
+branding/logo.png

@@ -2,30 +2,27 @@ import Foundation
 import Observation
 
 enum Screen: String, CaseIterable, Identifiable {
-    case today, timeline, stations, health
+    case find, status, health
     var id: String { rawValue }
     var title: String {
         switch self {
-        case .today:    return "Today"
-        case .timeline: return "Hour by hour"
-        case .stations: return "Stations"
-        case .health:   return "History"
+        case .find:   return "Find a recording"
+        case .status: return "Status"
+        case .health: return "History"
         }
     }
     var icon: String {
         switch self {
-        case .today:    return "checkmark.seal"
-        case .timeline: return "clock"
-        case .stations: return "dot.radiowaves.left.and.right"
-        case .health:   return "chart.bar"
+        case .find:   return "magnifyingglass"
+        case .status: return "checkmark.seal"
+        case .health: return "chart.bar"
         }
     }
     var blurb: String {
         switch self {
-        case .today:    return "Did everything record?"
-        case .timeline: return "Every hour, one row per station"
-        case .stations: return "One station at a time"
-        case .health:   return "How it has been doing"
+        case .find:   return "Listen or save any hour"
+        case .status: return "Did everything record?"
+        case .health: return "How it has been doing"
         }
     }
 }
@@ -35,11 +32,14 @@ enum Screen: String, CaseIterable, Identifiable {
 final class AppModel {
     // settings
     var baseURL: String { didSet { UserDefaults.standard.set(baseURL, forKey: "baseURL") } }
-    var token: String { didSet { Keychain.set(token, for: "apiToken") } }
-    var isConfigured: Bool { !baseURL.isEmpty && !token.isEmpty }
+    /// Not shown anywhere in the app. People are authenticated by Cloudflare
+    /// Access; this only exists so a build can be pointed at an unprotected
+    /// server during development.
+    var token: String = ""
+    var isConfigured: Bool { !baseURL.isEmpty }
 
     // navigation
-    var screen: Screen = .today
+    var screen: Screen = .find
     var focusedStation: String?
 
     // data
@@ -62,6 +62,11 @@ final class AppModel {
     init() {
         baseURL = UserDefaults.standard.string(forKey: "baseURL") ?? "https://radio-api.funasia.net"
         token = Keychain.get("apiToken") ?? ""
+        if focusedStation == nil { focusedStation = stations.first }
+    }
+
+    func download(_ rec: Recording, to url: URL) async throws {
+        try await client.download(rec, to: url)
     }
 
     var dateString: String {

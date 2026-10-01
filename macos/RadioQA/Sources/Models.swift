@@ -202,3 +202,19 @@ enum HourLabel {
         return hour < 12 ? "\(hour)a" : "\(hour - 12)p"
     }
 }
+
+
+struct Me: Codable {
+    let signedIn: Bool
+    let kind: String
+    let email: String?
+    let name: String?
+
+    var display: String { email ?? name ?? "signed in" }
+    var isPerson: Bool { kind == "user" }
+
+    enum CodingKeys: String, CodingKey {
+        case kind, email, name
+        case signedIn = "signed_in"
+    }
+}

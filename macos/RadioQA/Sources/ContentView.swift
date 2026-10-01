@@ -5,6 +5,7 @@ struct ContentView: View {
     @State private var player = Player()
     @State private var auth = Auth(baseURL: UserDefaults.standard.string(forKey: "baseURL")
                                    ?? "https://radio-api.funasia.net")
+    @State private var downloads = Downloads()
     @State private var showSettings = false
     @State private var showLogin = false
 
@@ -13,8 +14,10 @@ struct ContentView: View {
             sidebar
         } detail: {
             VStack(spacing: 0) {
-                dateBar
-                Divider()
+                if model.screen != .find {
+                    dateBar
+                    Divider()
+                }
                 body(for: model.screen)
                 if player.current != nil {
                     Divider()
@@ -40,6 +43,11 @@ struct ContentView: View {
             await model.load()
         }
         .onChange(of: model.needsSignIn) { _, needs in if needs { showLogin = true } }
+        .alert("Could not save",
+               isPresented: Binding(get: { downloads.lastError != nil },
+                                    set: { if !$0 { downloads.lastError = nil } })) {
+            Button("OK", role: .cancel) { downloads.lastError = nil }
+        } message: { Text(downloads.lastError ?? "") }
         .onChange(of: model.selected) { _, new in
             guard let r = new, let url = model.playbackURL(for: r) else { return }
             player.play(r, url: url)
@@ -49,7 +57,8 @@ struct ContentView: View {
     // MARK: sidebar
 
     private var sidebar: some View {
-        List(selection: Binding(get: { model.screen }, set: { model.screen = $0 ?? .today })) {
+        List(selection: Binding<Screen?>(get: { model.screen },
+                                         set: { model.screen = $0 ?? .find })) {
             Section {
                 ForEach(Screen.allCases) { s in
                     NavigationLink(value: s) {
@@ -62,6 +71,10 @@ struct ContentView: View {
                     }
                 }
             }
+        }
+        .safeAreaInset(edge: .top) {
+            BrandHeader(subtitle: "Recording archive")
+                .padding(.horizontal, 14).padding(.top, 12).padding(.bottom, 8)
         }
         .listStyle(.sidebar)
         .navigationSplitViewColumnWidth(min: 214, ideal: 224, max: 260)
@@ -139,15 +152,10 @@ struct ContentView: View {
 
     @ViewBuilder
     private func body(for screen: Screen) -> some View {
-        if !model.isConfigured {
-            EmptyState(symbol: "gearshape",
-                       title: "Almost ready",
-                       message: "Add the server address and access key so the app can reach your recordings.",
-                       action: ("Open Settings", { showSettings = true }))
-        } else if model.needsSignIn {
+        if model.needsSignIn || (!auth.signedIn && model.coverage == nil && model.error != nil) {
             EmptyState(symbol: "person.crop.circle.badge.questionmark",
-                       title: "Please sign in",
-                       message: "Use your funasia.net account to see the recordings.",
+                       title: "Sign in to continue",
+                       message: "Use your funasia.net email. You will be sent a 6-digit code.",
                        action: ("Sign in", { showLogin = true }))
         } else if let e = model.error {
             EmptyState(symbol: "exclamationmark.triangle", title: "Could not load", message: e,
@@ -157,10 +165,9 @@ struct ContentView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
             switch screen {
-            case .today:    TodayScreen(model: model, selection: $model.selected)
-            case .timeline: TimelineScreen(model: model, selection: $model.selected)
-            case .stations: StationsScreen(model: model, selection: $model.selected)
-            case .health:   HealthScreen(model: model)
+            case .find:   FindScreen(model: model, selection: $model.selected, downloads: downloads)
+            case .status: StatusScreen(model: model, selection: $model.selected)
+            case .health: HealthScreen(model: model)
             }
         }
     }
@@ -176,10 +183,12 @@ struct SignInSheet: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            HStack {
+            HStack(spacing: 12) {
+                BrandMark(size: 38)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Sign in").font(.system(size: 15, weight: .semibold))
-                    Text("Use your funasia.net account. Other accounts are not allowed.")
+                    Text("Sign in to PM Radio Logs")
+                        .font(.system(size: 15, weight: .semibold))
+                    Text("Use your funasia.net email. Other accounts are not allowed.")
                         .font(.system(size: 11)).foregroundStyle(.secondary)
                 }
                 Spacer()

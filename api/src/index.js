@@ -163,11 +163,85 @@ const isDate = (s) => /^\d{4}-\d{2}-\d{2}$/.test(s);
 const daysInclusive = (a, b) =>
   Math.round((new Date(`${b}T00:00:00Z`) - new Date(`${a}T00:00:00Z`)) / 86400000) + 1;
 
-function authorized(request, env) {
-  if (!env.API_TOKEN) return true;               // unset = open (dev only)
+function bearerOK(request, env) {
+  if (!env.API_TOKEN) return false;
   const h = request.headers.get("Authorization") || "";
-  const token = h.startsWith("Bearer ") ? h.slice(7) : new URL(request.url).searchParams.get("token");
+  const token = h.startsWith("Bearer ") ? h.slice(7)
+    : new URL(request.url).searchParams.get("token");
   return token === env.API_TOKEN;
+}
+
+
+// ---------------------------------------------------------------- identity
+
+const TEAM_DOMAIN = "funasia.cloudflareaccess.com";
+const ALLOWED_EMAIL_DOMAIN = "@funasia.net";
+
+let certCache = { keys: null, at: 0 };
+
+async function accessKeys() {
+  // certs rotate; an hour is well inside that and avoids a fetch per request
+  if (certCache.keys && Date.now() - certCache.at < 3600_000) return certCache.keys;
+  const r = await fetch(`https://${TEAM_DOMAIN}/cdn-cgi/access/certs`);
+  if (!r.ok) return certCache.keys || [];
+  const { keys } = await r.json();
+  certCache = { keys, at: Date.now() };
+  return keys;
+}
+
+const b64urlToBytes = (s) => {
+  const b = atob(s.replace(/-/g, "+").replace(/_/g, "/").padEnd(Math.ceil(s.length / 4) * 4, "="));
+  return Uint8Array.from(b, (c) => c.charCodeAt(0));
+};
+
+/**
+ * Verify the JWT Cloudflare Access attaches to every request it lets through.
+ *
+ * Access already refuses anyone outside the policy before the Worker runs, so
+ * this is defence in depth: it means the Worker is still safe if it is ever
+ * reachable by a route that does not pass through Access. It also tells us who
+ * is calling, which the app shows and which makes the logs meaningful.
+ */
+async function verifyAccess(request) {
+  const token = request.headers.get("Cf-Access-Jwt-Assertion");
+  if (!token) return null;
+  const parts = token.split(".");
+  if (parts.length !== 3) return null;
+
+  let header, payload;
+  try {
+    header = JSON.parse(new TextDecoder().decode(b64urlToBytes(parts[0])));
+    payload = JSON.parse(new TextDecoder().decode(b64urlToBytes(parts[1])));
+  } catch { return null; }
+
+  if (payload.iss !== `https://${TEAM_DOMAIN}`) return null;
+  const now = Math.floor(Date.now() / 1000);
+  if (payload.exp && payload.exp < now) return null;
+  if (payload.nbf && payload.nbf > now) return null;
+
+  const jwk = (await accessKeys()).find((k) => k.kid === header.kid);
+  if (!jwk) return null;
+
+  let ok = false;
+  try {
+    const key = await crypto.subtle.importKey(
+      "jwk", jwk, { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" }, false, ["verify"]);
+    ok = await crypto.subtle.verify(
+      "RSASSA-PKCS1-v1_5", key, b64urlToBytes(parts[2]),
+      new TextEncoder().encode(`${parts[0]}.${parts[1]}`));
+  } catch { return null; }
+  if (!ok) return null;
+
+  // A service token has no email; it is machine access, allowed by its own policy.
+  const email = payload.email || null;
+  if (email && !email.toLowerCase().endsWith(ALLOWED_EMAIL_DOMAIN)) return null;
+
+  return {
+    email,
+    kind: email ? "user" : "service",
+    name: payload.common_name || null,
+    expires: payload.exp || null,
+  };
 }
 
 export default {
@@ -182,13 +256,26 @@ export default {
     if (path === "/health") {
       return json({ ok: true, service: "show-archive-api", time: new Date().toISOString() });
     }
-    if (!authorized(request, env)) return err(401, "unauthorized", "send Authorization: Bearer <token>");
+    // People reach this through Cloudflare Access and need no key of their own.
+    // The shared key stays only so scripts can call the Worker directly.
+    const identity = await verifyAccess(request);
+    if (!identity && !bearerOK(request, env)) {
+      return err(401, "unauthorized",
+        "Sign in with a funasia.net account, or send a valid API token.");
+    }
+
+    if (path === "/me") {
+      return json(identity
+        ? { signed_in: true, ...identity }
+        : { signed_in: true, kind: "token", email: null, name: "API token" });
+    }
 
     if (path === "/" ) {
       return json({
         service: "show-archive-api",
         endpoints: {
           "/health": "liveness",
+          "/me": "who you are signed in as",
           "/stations": "configured stations",
           "/recordings": "?station=&date=|from=&to=&limit= - recording metadata",
           "/coverage": "?date=&station= - per-hour completeness for QA",

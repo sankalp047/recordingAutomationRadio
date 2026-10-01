@@ -149,5 +149,16 @@ await t("/stats requires auth", async () => eq((await call("/stats?days=1")).sta
 await t("/stats rejects a bad date", async () =>
   eq((await call("/stats?to=nonsense", AUTH)).status, 400));
 
+await t("/me reports token access when no Access JWT", async () => {
+  const b = await (await call("/me", AUTH)).json();
+  eq(b.signed_in, true);
+  eq(b.kind, "token");
+});
+await t("/me requires credentials", async () => eq((await call("/me")).status, 401));
+await t("401 message mentions signing in", async () => {
+  const b = await (await call("/stations")).json();
+  ok(/funasia\.net/.test(b.detail), `got: ${b.detail}`);
+});
+
 console.log(`\n${fails ? fails + " FAILED" : "all passed"}`);
 process.exit(fails ? 1 : 0);

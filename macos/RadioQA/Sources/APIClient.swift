@@ -21,7 +21,10 @@ enum APIError: LocalizedError {
 
 struct APIClient {
     var baseURL: String
-    var token: String
+    /// Optional. People are authenticated by Cloudflare Access, which sets a
+    /// cookie the shared URLSession store carries. The key only exists so
+    /// scripts can call the Worker directly, and the app never asks for one.
+    var token: String = ""
 
     private var session: URLSession {
         let c = URLSessionConfiguration.default
@@ -31,7 +34,7 @@ struct APIClient {
     }
 
     private func get<T: Decodable>(_ path: String, _ items: [URLQueryItem] = []) async throws -> T {
-        guard !baseURL.isEmpty, !token.isEmpty,
+        guard !baseURL.isEmpty,
               var comps = URLComponents(string: baseURL.trimmingCharacters(in: .whitespaces))
         else { throw APIError.notConfigured }
 
@@ -40,7 +43,8 @@ struct APIClient {
         guard let url = comps.url else { throw APIError.notConfigured }
 
         var req = URLRequest(url: url)
-        req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        req.httpShouldHandleCookies = true
+        if !token.isEmpty { req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization") }
 
         let data: Data, resp: URLResponse
         do { (data, resp) = try await session.data(for: req) }
@@ -84,11 +88,30 @@ struct APIClient {
         return try await get("/recordings", q)
     }
 
-    /// AVPlayer cannot easily carry an Authorization header, and the API
-    /// accepts the token as a query parameter for exactly this case.
+    /// AVPlayer shares the app's cookie store, so an Access session is carried
+    /// automatically. The key is appended only when one is configured.
     func playbackURL(for rec: Recording) -> URL? {
         guard var c = URLComponents(string: rec.audioURL) else { return nil }
-        c.queryItems = [URLQueryItem(name: "token", value: token)]
+        if !token.isEmpty { c.queryItems = [URLQueryItem(name: "token", value: token)] }
         return c.url
+    }
+
+    func me() async throws -> Me { try await get("/me") }
+
+    /// Streams one recording to a local file.
+    func download(_ rec: Recording, to destination: URL) async throws {
+        guard let url = playbackURL(for: rec) else { throw APIError.notConfigured }
+        var req = URLRequest(url: url)
+        req.httpShouldHandleCookies = true
+        if !token.isEmpty { req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization") }
+        let (tmp, resp) = try await URLSession.shared.download(for: req)
+        let code = (resp as? HTTPURLResponse)?.statusCode ?? 0
+        guard (200..<300).contains(code) else {
+            try? FileManager.default.removeItem(at: tmp)
+            if code == 401 { throw APIError.needsSignIn }
+            throw APIError.http(code, "")
+        }
+        try? FileManager.default.removeItem(at: destination)
+        try FileManager.default.moveItem(at: tmp, to: destination)
     }
 }
