@@ -11,8 +11,11 @@ targets:
     platform: macOS
     sources:
       - path: RadioQA/Sources
-    resources:
+      # XcodeGen has no top-level `resources:` key - a silently ignored one is
+      # how the app icon failed to reach the bundle. Resources are sources with
+      # an explicit build phase.
       - path: RadioQA/Resources
+        buildPhase: resources
         optional: true
     info:
       path: RadioQA/Info.plist
