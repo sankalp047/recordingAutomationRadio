@@ -133,15 +133,17 @@ final class AppModel {
         coverage?.stations.first { $0.station == station }
     }
 
-    /// Segments overlapping a station-hour, in start order.
+    /// Segments that BEGIN in this hour, in start order.
+    ///
+    /// Not segments overlapping the hour. Duration is derived from object size,
+    /// so a full hour measures a fraction of a second over 3600 and would also
+    /// "overlap" the next hour - which made one recording appear in two rows,
+    /// highlight both as playing, and let an empty hour show a neighbour's
+    /// duration beside its own "Not recorded". Coverage still uses real
+    /// intervals; that is computed by the API and is unaffected.
     func segments(station: String, hour: Int) -> [Recording] {
-        recordings.filter { r in
-            guard r.station == station else { return false }
-            let mins = Double(Int(r.startLocal.dropFirst(3).prefix(2)) ?? 0)
-            let start = Double(r.startHour) * 3600 + mins * 60
-            return start < Double(hour + 1) * 3600 && start + r.durationSeconds > Double(hour) * 3600
-        }
-        .sorted { $0.startLocal < $1.startLocal }
+        recordings.filter { $0.station == station && $0.startHour == hour }
+            .sorted { $0.startLocal < $1.startLocal }
     }
 
     func recordings(for station: String) -> [Recording] {

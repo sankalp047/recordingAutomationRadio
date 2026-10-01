@@ -130,14 +130,14 @@ const coverageAt = (st, hour) => {
   const g = c.gaps.find((x) => x.hour === hour);
   return g ? g.coverage : 1;
 };
+// Segments that BEGIN in this hour, not ones overlapping it. Duration comes
+// from object size, so a full hour measures a fraction of a second over 3600
+// and would also overlap the next hour - putting one recording in two rows,
+// highlighting both as playing, and showing a neighbour's duration next to an
+// hour's own "Not recorded". Coverage still uses real intervals, from the API.
 function segmentsAt(st, hour) {
   return S.recordings
-    .filter((r) => {
-      if (r.station !== st) return false;
-      const [hh, mm] = r.start_local.split(':').map(Number);
-      const start = hh * 3600 + mm * 60;
-      return start < (hour + 1) * 3600 && start + r.duration_seconds > hour * 3600;
-    })
+    .filter((r) => r.station === st && Number(r.start_local.slice(0, 2)) === hour)
     .sort((a, b) => a.start_local.localeCompare(b.start_local));
 }
 const recordingsFor = (st) => S.recordings.filter((r) => r.station === st)
