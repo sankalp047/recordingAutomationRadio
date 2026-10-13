@@ -44,7 +44,7 @@ struct AdminLoginView: View {
         VStack(spacing: 14) {
             Image(systemName: "lock.shield").font(.system(size: 34)).foregroundStyle(.secondary)
             Text("Sign in to FunAsia admin").font(.system(size: 16, weight: .medium))
-            Text("Use your FunAsia admin account. This is separate from the recording archive sign-in.")
+            Text("Use your @funasia.net admin account. This is separate from the recording archive sign-in.")
                 .font(.system(size: 12)).foregroundStyle(.secondary)
                 .multilineTextAlignment(.center).frame(maxWidth: 380)
 
@@ -67,7 +67,7 @@ struct AdminLoginView: View {
             .disabled(email.isEmpty || password.isEmpty)
             .keyboardShortcut(.defaultAction)
 
-            Text("Admins who signed up with Google have no password. Google sign-in is not built yet.")
+            Text("Access is granted by role. Ask a superadmin if you cannot get in.")
                 .font(.system(size: 11)).foregroundStyle(.tertiary)
                 .multilineTextAlignment(.center).frame(maxWidth: 380)
         }

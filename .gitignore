@@ -25,3 +25,6 @@ macos/dist/
 branding/logo.png
 windows/node_modules/
 windows/dist/
+
+# Firebase app config - identifies the funasiawe project, keep out of a public repo
+**/GoogleService-Info.plist

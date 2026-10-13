@@ -40,6 +40,11 @@ final class AdminSession {
     static let isConfigured: Bool =
         Bundle.main.url(forResource: "GoogleService-Info", withExtension: "plist") != nil
 
+    /// Admin sign-in is restricted to the company domain. The role in
+    /// Firestore is still what grants access - this only stops an outside
+    /// account from ever reaching the role check.
+    static let allowedDomain = "@funasia.net"
+
     init() {
         guard Self.isConfigured else { state = .unconfigured; return }
         if FirebaseApp.app() == nil { FirebaseApp.configure() }
@@ -50,9 +55,14 @@ final class AdminSession {
 
     func signIn(email: String, password: String) async {
         guard Self.isConfigured else { state = .unconfigured; return }
+        let address = email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard address.hasSuffix(Self.allowedDomain) else {
+            state = .failed("Only \(Self.allowedDomain) accounts can sign in here.")
+            return
+        }
         state = .signingIn
         do {
-            let result = try await Auth.auth().signIn(withEmail: email, password: password)
+            let result = try await Auth.auth().signIn(withEmail: address, password: password)
             await adopt(result.user)
         } catch {
             state = .failed(friendly(error))
@@ -75,6 +85,11 @@ final class AdminSession {
                 .collection("users").document(user.uid).getDocument()
             let raw = snap.data()?["role"] as? String ?? "user"
             let role = Role(rawValue: raw) ?? .user
+            guard email.lowercased().hasSuffix(Self.allowedDomain) else {
+                try? Auth.auth().signOut()
+                state = .refused("\(email) is not a \(Self.allowedDomain) account.")
+                return
+            }
             if role.canOpenAdmin {
                 state = .signedIn(email: email, role: role)
             } else {
