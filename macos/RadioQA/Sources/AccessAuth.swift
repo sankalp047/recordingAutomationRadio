@@ -17,7 +17,7 @@ import Observation
 /// an Access challenge.
 @MainActor
 @Observable
-final class Auth {
+final class AccessAuth {
     var identity: Identity?
     var signedIn = false
     var checking = false

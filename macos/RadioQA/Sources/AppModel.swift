@@ -1,14 +1,35 @@
 import Foundation
 import Observation
 
-enum Screen: String, CaseIterable, Identifiable {
+enum Screen: Hashable, Identifiable {
     case find, status, health
-    var id: String { rawValue }
+    case adminDashboard
+    case adminCollection(String)       // Firestore collection key
+
+    static let recordingCases: [Screen] = [.find, .status, .health]
+    var id: String {
+        switch self {
+        case .find: return "find"
+        case .status: return "status"
+        case .health: return "health"
+        case .adminDashboard: return "admin"
+        case .adminCollection(let k): return "admin.\(k)"
+        }
+    }
+    var isAdmin: Bool {
+        switch self {
+        case .adminDashboard, .adminCollection: return true
+        default: return false
+        }
+    }
     var title: String {
         switch self {
         case .find:   return "Find a recording"
         case .status: return "Status"
         case .health: return "History"
+        case .adminDashboard: return "Dashboard"
+        case .adminCollection(let k):
+            return AdminCollections.content.first { $0.key == k }?.title ?? k
         }
     }
     var icon: String {
@@ -16,6 +37,9 @@ enum Screen: String, CaseIterable, Identifiable {
         case .find:   return "magnifyingglass"
         case .status: return "checkmark.seal"
         case .health: return "chart.bar"
+        case .adminDashboard: return "square.grid.2x2"
+        case .adminCollection(let k):
+            return AdminCollections.content.first { $0.key == k }?.icon ?? "doc"
         }
     }
     var blurb: String {
@@ -23,6 +47,8 @@ enum Screen: String, CaseIterable, Identifiable {
         case .find:   return "Listen or save any hour"
         case .status: return "Did everything record?"
         case .health: return "How it has been doing"
+        case .adminDashboard: return "Counts across the site"
+        case .adminCollection: return ""
         }
     }
 }

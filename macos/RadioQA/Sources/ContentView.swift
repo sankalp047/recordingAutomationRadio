@@ -3,9 +3,10 @@ import SwiftUI
 struct ContentView: View {
     @State private var model = AppModel()
     @State private var player = Player()
-    @State private var auth = Auth(baseURL: UserDefaults.standard.string(forKey: "baseURL")
+    @State private var auth = AccessAuth(baseURL: UserDefaults.standard.string(forKey: "baseURL")
                                    ?? "https://radio-api.funasia.net")
     @State private var downloads = Downloads()
+    @State private var admin = AdminSession()
     @State private var showSettings = false
     @State private var showLogin = false
 
@@ -14,9 +15,11 @@ struct ContentView: View {
             sidebar
         } detail: {
             VStack(spacing: 0) {
-                if model.screen != .find {
-                    dateBar
-                    Divider()
+                if model.screen == .find || model.screen == .status || model.screen == .health {
+                    if model.screen != .find {
+                        dateBar
+                        Divider()
+                    }
                 }
                 body(for: model.screen)
                 if player.current != nil {
@@ -59,8 +62,8 @@ struct ContentView: View {
     private var sidebar: some View {
         List(selection: Binding<Screen?>(get: { model.screen },
                                          set: { model.screen = $0 ?? .find })) {
-            Section {
-                ForEach(Screen.allCases) { s in
+            Section("Recordings") {
+                ForEach(Screen.recordingCases) { s in
                     NavigationLink(value: s) {
                         Label {
                             VStack(alignment: .leading, spacing: 1) {
@@ -68,6 +71,18 @@ struct ContentView: View {
                                 Text(s.blurb).font(.system(size: 10)).foregroundStyle(.secondary)
                             }
                         } icon: { Image(systemName: s.icon) }
+                    }
+                }
+            }
+
+            Section("FunAsia admin") {
+                NavigationLink(value: Screen.adminDashboard) {
+                    Label(Screen.adminDashboard.title, systemImage: Screen.adminDashboard.icon)
+                        .font(.system(size: 13))
+                }
+                ForEach(AdminCollections.content) { spec in
+                    NavigationLink(value: Screen.adminCollection(spec.key)) {
+                        Label(spec.title, systemImage: spec.icon).font(.system(size: 13))
                     }
                 }
             }
@@ -150,9 +165,30 @@ struct ContentView: View {
 
     // MARK: content
 
+    /// Admin screens have their own sign-in, separate from the recording
+    /// archive's, so they must not sit behind the Cloudflare Access gate.
+    @ViewBuilder
+    private func adminBody(_ screen: Screen) -> some View {
+        switch screen {
+        case .adminDashboard:
+            AdminGate(session: admin) { AdminDashboard(session: admin) }
+        case .adminCollection(let key):
+            if let spec = AdminCollections.content.first(where: { $0.key == key }) {
+                AdminGate(session: admin) { AdminCollectionView(spec: spec) }
+            } else {
+                EmptyState(symbol: "questionmark.folder", title: "Unknown section",
+                           message: "No admin screen is defined for “\(key)”.")
+            }
+        default:
+            EmptyView()
+        }
+    }
+
     @ViewBuilder
     private func body(for screen: Screen) -> some View {
-        if model.needsSignIn || (!auth.signedIn && model.coverage == nil && model.error != nil) {
+        if screen.isAdmin {
+            adminBody(screen)
+        } else if model.needsSignIn || (!auth.signedIn && model.coverage == nil && model.error != nil) {
             EmptyState(symbol: "person.crop.circle.badge.questionmark",
                        title: "Sign in to continue",
                        message: "Use your funasia.net email. You will be sent a 6-digit code.",
@@ -168,6 +204,7 @@ struct ContentView: View {
             case .find:   FindScreen(model: model, selection: $model.selected, downloads: downloads)
             case .status: StatusScreen(model: model, selection: $model.selected)
             case .health: HealthScreen(model: model)
+            default: EmptyView()   // admin screens are handled above
             }
         }
     }
@@ -177,7 +214,7 @@ struct ContentView: View {
 
 struct SignInSheet: View {
     let baseURL: String
-    let auth: Auth
+    let auth: AccessAuth
     var onDone: () -> Void
     @Environment(\.dismiss) private var dismiss
 

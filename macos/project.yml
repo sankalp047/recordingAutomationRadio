@@ -5,10 +5,22 @@ options:
     macOS: "14.0"
   createIntermediateGroups: true
 
+packages:
+  Firebase:
+    url: https://github.com/firebase/firebase-ios-sdk
+    from: "11.6.0"
+
 targets:
   RadioQA:
     type: application
     platform: macOS
+    dependencies:
+      - package: Firebase
+        product: FirebaseAuth
+      - package: Firebase
+        product: FirebaseFirestore
+      - package: Firebase
+        product: FirebaseStorage
     sources:
       - path: RadioQA/Sources
       # XcodeGen has no top-level `resources:` key - a silently ignored one is

@@ -4,7 +4,7 @@ import SwiftUI
 /// server address is already correct, and sign-in is handled by Cloudflare.
 struct SettingsView: View {
     let model: AppModel
-    let auth: Auth
+    let auth: AccessAuth
     var onSave: () -> Void
     @Environment(\.dismiss) private var dismiss
 
