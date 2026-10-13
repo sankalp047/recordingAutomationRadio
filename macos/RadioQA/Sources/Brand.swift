@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// The PM Radio Logs mark. Falls back to a system symbol so the app still
+/// The PM Radio Admin mark. Falls back to a system symbol so the app still
 /// builds and runs before the artwork has been added to Resources.
 struct BrandMark: View {
     var size: CGFloat = 34
@@ -31,7 +31,7 @@ struct BrandHeader: View {
         HStack(spacing: 10) {
             BrandMark(size: 30)
             VStack(alignment: .leading, spacing: 0) {
-                Text("PM Radio Logs").font(.system(size: 14, weight: .semibold))
+                Text("PM Radio Admin").font(.system(size: 14, weight: .semibold))
                 if let s = subtitle {
                     Text(s).font(.system(size: 10)).foregroundStyle(.secondary)
                 }

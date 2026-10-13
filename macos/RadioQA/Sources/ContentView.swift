@@ -186,7 +186,7 @@ struct SignInSheet: View {
             HStack(spacing: 12) {
                 BrandMark(size: 38)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Sign in to PM Radio Logs")
+                    Text("Sign in to PM Radio Admin")
                         .font(.system(size: 15, weight: .semibold))
                     Text("Use your funasia.net email. Other accounts are not allowed.")
                         .font(.system(size: 11)).foregroundStyle(.secondary)

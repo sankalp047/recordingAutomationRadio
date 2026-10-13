@@ -37,6 +37,6 @@ else
   echo "NOT signed - recipients will need to right-click > Open the first time."
 fi
 
-hdiutil create -volname "PM Radio Logs" -srcfolder "$OUT/$APP_NAME" \
+hdiutil create -volname "PM Radio Admin" -srcfolder "$OUT/$APP_NAME" \
   -ov -format UDZO "$OUT/PMRadioLogs.dmg" >/dev/null
 echo "wrote $OUT/PMRadioLogs.dmg ($(du -h "$OUT/PMRadioLogs.dmg" | cut -f1))"
