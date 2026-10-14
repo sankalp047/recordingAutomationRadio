@@ -8,10 +8,15 @@ enum Keychain {
 
     static func set(_ value: String, for account: String) {
         let data = Data(value.utf8)
+        // kSecUseDataProtectionKeychain keys the item to the app's identity
+        // rather than an ACL. Without it, every ad-hoc rebuild changes the
+        // signature, the ACL no longer matches, and macOS asks for the login
+        // keychain password on each launch.
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
             kSecAttrAccount as String: account,
+            kSecUseDataProtectionKeychain as String: true,
         ]
         SecItemDelete(query as CFDictionary)
         var add = query
@@ -26,6 +31,7 @@ enum Keychain {
             kSecAttrAccount as String: account,
             kSecReturnData as String: true,
             kSecMatchLimit as String: kSecMatchLimitOne,
+            kSecUseDataProtectionKeychain as String: true,
         ]
         var out: CFTypeRef?
         guard SecItemCopyMatching(query as CFDictionary, &out) == errSecSuccess,
@@ -39,6 +45,7 @@ enum Keychain {
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
             kSecAttrAccount as String: account,
+            kSecUseDataProtectionKeychain as String: true,
         ] as CFDictionary)
     }
 }

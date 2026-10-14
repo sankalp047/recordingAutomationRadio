@@ -18,7 +18,12 @@ struct AdminAreaView: View {
         if case .dashboard = area {
             AdminDashboard(session: session)
         } else if let spec = AdminSidebar.spec(for: area) {
+            // .id() is load-bearing. Without it SwiftUI reuses this view when
+            // you move between collections and keeps the previous one's
+            // @State, so you see the old rows rendered with the new
+            // collection's field names — mostly blank.
             AdminCollectionView(spec: spec, session: session)
+                .id(spec.key)
         } else if case .custom("galleries") = area {
             GalleriesScreen(session: session)
         } else if case .custom("marketplace") = area {
@@ -27,6 +32,7 @@ struct AdminAreaView: View {
             PodcastsScreen(session: session)
         } else if case let .bigfan(key) = area, let spec = BigfanCatalog.spec(key) {
             BigfanCollectionView(spec: spec, session: session)
+                .id("bigfan.\(key)")
         } else {
             notBuilt
         }

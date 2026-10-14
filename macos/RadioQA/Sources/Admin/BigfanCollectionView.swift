@@ -269,7 +269,9 @@ struct BigfanCollectionView: View {
                 EmptyState(symbol: "tray", title: "Nothing here yet",
                            message: "No \(spec.title.lowercased()) exist in the BigFan app.")
             } else {
-                List(Array(shown.enumerated()), id: \.offset) { _, item in
+                // keyed by the document id, not the row index, so rows keep
+                // their identity when the list changes
+                List(shown, id: \.bigfanRowID) { item in
                     row(item)
                 }
                 .listStyle(.inset)
