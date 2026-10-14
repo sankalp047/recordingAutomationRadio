@@ -30,6 +30,14 @@ struct AdminAreaView: View {
             MarketplaceScreen(session: session)
         } else if case .custom("podcasts") = area {
             PodcastsScreen(session: session)
+        } else if case .custom("popup") = area {
+            PopupScreen(session: session)
+        } else if case .custom("events-app-downloads") = area {
+            EventsDownloadsScreen(session: session)
+        } else if case .bigfan("analytics") = area {
+            BigfanAnalyticsScreen(session: session)
+        } else if case .bigfan("content-engagement") = area {
+            BigfanEngagementScreen(session: session)
         } else if case let .bigfan(key) = area, let spec = BigfanCatalog.spec(key) {
             BigfanCollectionView(spec: spec, session: session)
                 .id("bigfan.\(key)")
