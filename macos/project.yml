@@ -5,22 +5,10 @@ options:
     macOS: "14.0"
   createIntermediateGroups: true
 
-packages:
-  Firebase:
-    url: https://github.com/firebase/firebase-ios-sdk
-    from: "11.6.0"
-
 targets:
   RadioQA:
     type: application
     platform: macOS
-    dependencies:
-      - package: Firebase
-        product: FirebaseAuth
-      - package: Firebase
-        product: FirebaseFirestore
-      - package: Firebase
-        product: FirebaseStorage
     sources:
       - path: RadioQA/Sources
       # XcodeGen has no top-level `resources:` key - a silently ignored one is
@@ -45,12 +33,13 @@ targets:
       properties:
         com.apple.security.app-sandbox: true
         com.apple.security.network.client: true
+        com.apple.security.files.user-selected.read-write: true
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: net.funasia.RadioQA
         MARKETING_VERSION: "1.0"
         SWIFT_VERSION: "5.0"
         CODE_SIGN_IDENTITY: "-"
-        CODE_SIGNING_REQUIRED: "NO"
-        CODE_SIGNING_ALLOWED: "NO"
+        CODE_SIGNING_REQUIRED: "YES"
+        CODE_SIGNING_ALLOWED: "YES"
         ENABLE_HARDENED_RUNTIME: "NO"

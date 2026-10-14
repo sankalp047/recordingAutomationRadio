@@ -4,7 +4,7 @@ import Observation
 enum Screen: Hashable, Identifiable {
     case find, status, health
     case adminDashboard
-    case adminCollection(String)       // Firestore collection key
+    case admin(AdminArea)              // any admin destination
 
     static let recordingCases: [Screen] = [.find, .status, .health]
     var id: String {
@@ -13,12 +13,12 @@ enum Screen: Hashable, Identifiable {
         case .status: return "status"
         case .health: return "health"
         case .adminDashboard: return "admin"
-        case .adminCollection(let k): return "admin.\(k)"
+        case .admin(let a): return "admin.\(a.id)"
         }
     }
     var isAdmin: Bool {
         switch self {
-        case .adminDashboard, .adminCollection: return true
+        case .adminDashboard, .admin: return true
         default: return false
         }
     }
@@ -28,8 +28,8 @@ enum Screen: Hashable, Identifiable {
         case .status: return "Status"
         case .health: return "History"
         case .adminDashboard: return "Dashboard"
-        case .adminCollection(let k):
-            return AdminCollections.content.first { $0.key == k }?.title ?? k
+        case .admin(let a):
+            return (AdminSidebar.main + AdminSidebar.bigfan).first { $0.area == a }?.title ?? a.id
         }
     }
     var icon: String {
@@ -38,8 +38,8 @@ enum Screen: Hashable, Identifiable {
         case .status: return "checkmark.seal"
         case .health: return "chart.bar"
         case .adminDashboard: return "square.grid.2x2"
-        case .adminCollection(let k):
-            return AdminCollections.content.first { $0.key == k }?.icon ?? "doc"
+        case .admin(let a):
+            return (AdminSidebar.main + AdminSidebar.bigfan).first { $0.area == a }?.icon ?? "doc"
         }
     }
     var blurb: String {
@@ -48,7 +48,7 @@ enum Screen: Hashable, Identifiable {
         case .status: return "Did everything record?"
         case .health: return "How it has been doing"
         case .adminDashboard: return "Counts across the site"
-        case .adminCollection: return ""
+        case .admin: return ""
         }
     }
 }

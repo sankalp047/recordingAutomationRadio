@@ -119,10 +119,29 @@ enum AdminCollections {
             .init(name: "order", label: "Order", kind: .number, defaultValue: .number(0)),
         ])
 
+    static let bollywoodReviews = CollectionSpec(
+        key: "bollywoodReviews", title: "Advertising Reviews", icon: "film",
+        storagePath: "reviews", searchField: "movieTitle", superadminOnly: true,
+        fields: [
+            .init(name: "movieTitle", label: "Title", kind: .text, required: true),
+            .init(name: "imageUrl", label: "Poster", kind: .image),
+            .init(name: "rating", label: "Rating", kind: .number, defaultValue: .number(0)),
+            .init(name: "reviewSummary", label: "Summary", kind: .textarea),
+            .init(name: "reviewContent", label: "Review", kind: .textarea),
+            .init(name: "releaseYear", label: "Year", kind: .text),
+            .init(name: "genre", label: "Genre", kind: .text),
+            .init(name: "order", label: "Order", kind: .number, defaultValue: .number(0)),
+            .init(name: "active", label: "Active", kind: .checkbox, defaultValue: .bool(true)),
+        ])
+
     /// Content screens driven entirely by the generic editor.
     static let content: [CollectionSpec] = [
         banners, stations, events, clients, clientBanners, businesses, rssSources, mediaKit,
     ]
+
+    /// Everything the generic editor can drive, including screens the web
+    /// admin linked to but never built.
+    static let all: [CollectionSpec] = content + [bollywoodReviews]
 
     /// Dashboard cards. Counts are unfiltered, so inactive docs are included.
     static let dashboardCounts: [(label: String, collection: String)] = [

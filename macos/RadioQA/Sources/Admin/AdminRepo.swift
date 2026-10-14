@@ -1,14 +1,13 @@
 import Foundation
 import Observation
-import FirebaseFirestore
-import FirebaseStorage
 import UniformTypeIdentifiers
 
-/// Reads and writes one Firestore collection through the generic field model.
+/// Reads and writes one Firestore collection over REST.
 @MainActor
 @Observable
 final class AdminRepo {
     let spec: CollectionSpec
+    private let session: AdminSession
     private(set) var rows: [Row] = []
     private(set) var loading = false
     private(set) var error: String?
@@ -19,34 +18,37 @@ final class AdminRepo {
         func display(_ field: String) -> String { values[field]?.asString ?? "" }
     }
 
-    init(spec: CollectionSpec) { self.spec = spec }
+    init(spec: CollectionSpec, session: AdminSession) {
+        self.spec = spec
+        self.session = session
+    }
 
-    private var db: Firestore { Firestore.firestore() }
+    private func ready() async -> (String, FirebaseREST.Config)? {
+        guard let config = session.firebaseConfig, let token = await session.validToken()
+        else { error = "Not signed in."; return nil }
+        return (token, config)
+    }
 
     func load() async {
         loading = true; error = nil
         defer { loading = false }
+        guard let (token, config) = await ready() else { return }
         do {
-            let snap = try await db.collection(spec.key).getDocuments()
-            var out = snap.documents.map { doc in
-                Row(id: doc.documentID,
-                    values: doc.data().mapValues { FieldValue.from($0) })
-            }
-            // Sorted here, not on the server - the web admin never sorted
-            // server-side and the data has no matching indexes.
+            let docs = try await FirebaseREST.list(collection: spec.key, token: token, config: config)
+            var out = docs.map { Row(id: $0.id, values: $0.fields.mapValues { FieldValue.from($0) }) }
+            // Sorted here, not on the server: the web admin never sorted
+            // server-side and there are no matching indexes.
             if spec.hasOrder {
-                out.sort { a, b in
-                    let x = a.values["order"]?.asDouble ?? 0
-                    let y = b.values["order"]?.asDouble ?? 0
-                    if x != y { return x < y }
-                    return a.display(spec.searchField) < b.display(spec.searchField)
+                out.sort {
+                    let x = $0.values["order"]?.asDouble ?? 0, y = $1.values["order"]?.asDouble ?? 0
+                    return x == y ? $0.display(spec.searchField) < $1.display(spec.searchField) : x < y
                 }
             } else {
                 out.sort { $0.display(spec.searchField) < $1.display(spec.searchField) }
             }
             rows = out
         } catch {
-            self.error = error.localizedDescription
+            self.error = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
         }
     }
 
@@ -54,66 +56,70 @@ final class AdminRepo {
     /// shape matches what the website reads.
     func save(id: String?, values: [String: FieldValue]) async -> Bool {
         error = nil
+        guard let (token, config) = await ready() else { return false }
         var payload: [String: Any] = [:]
         for f in spec.fields {
             let v = values[f.name] ?? f.defaultValue
             switch f.kind {
-            case .checkbox:            payload[f.name] = v.asBool
-            case .number:              payload[f.name] = v.asDouble
-            default:                   payload[f.name] = v.asString
+            case .checkbox: payload[f.name] = v.asBool
+            case .number:   payload[f.name] = v.asDouble
+            default:        payload[f.name] = v.asString
             }
         }
         do {
             if let id {
-                try await db.collection(spec.key).document(id).setData(payload, merge: true)
+                try await FirebaseREST.update(path: "\(spec.key)/\(id)", fields: payload,
+                                              token: token, config: config)
             } else {
                 payload["createdAt"] = ISO8601DateFormatter().string(from: Date())
-                _ = try await db.collection(spec.key).addDocument(data: payload)
+                try await FirebaseREST.create(collection: spec.key, fields: payload,
+                                              token: token, config: config)
             }
             await load()
             return true
         } catch {
-            self.error = error.localizedDescription
+            self.error = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
             return false
         }
     }
 
     func delete(id: String) async -> Bool {
         error = nil
+        guard let (token, config) = await ready() else { return false }
         do {
-            try await db.collection(spec.key).document(id).delete()
+            try await FirebaseREST.delete(path: "\(spec.key)/\(id)", token: token, config: config)
             await load()
             return true
         } catch {
-            self.error = error.localizedDescription
+            self.error = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
             return false
         }
     }
 
-    /// Uploads to `<folder>/<epochMillis>_<filename>` with the long cache
-    /// header the existing files use, and returns the download URL.
+    /// Uploads to `<folder>/<epochMillis>_<filename>` and returns the download URL.
     func upload(_ fileURL: URL) async -> String? {
         guard let folder = spec.storagePath else { return nil }
         error = nil
+        guard let (token, config) = await ready() else { return nil }
+        guard let data = try? Data(contentsOf: fileURL) else {
+            error = "Could not read that file."; return nil
+        }
         let name = fileURL.lastPathComponent
         let path = "\(folder)/\(Int(Date().timeIntervalSince1970 * 1000))_\(name)"
-        let meta = StorageMetadata()
-        meta.cacheControl = "public, max-age=31536000, immutable"
-        meta.contentType = UTType(filenameExtension: fileURL.pathExtension)?
+        let type = UTType(filenameExtension: fileURL.pathExtension)?
             .preferredMIMEType ?? "application/octet-stream"
         do {
-            let ref = Storage.storage().reference(withPath: path)
-            _ = try await ref.putFileAsync(from: fileURL, metadata: meta)
-            return try await ref.downloadURL().absoluteString
+            return try await FirebaseREST.upload(data: data, to: path, contentType: type,
+                                                 token: token, config: config)
         } catch {
-            self.error = error.localizedDescription
+            self.error = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
             return nil
         }
     }
 
-    /// Unfiltered server-side count, as the dashboard uses.
-    static func count(_ collection: String) async -> Int? {
-        try? await Firestore.firestore().collection(collection)
-            .count.getAggregation(source: .server).count.intValue
+    static func count(_ collection: String, session: AdminSession) async -> Int? {
+        guard let config = session.firebaseConfig, let token = await session.validToken()
+        else { return nil }
+        return try? await FirebaseREST.count(collection: collection, token: token, config: config)
     }
 }

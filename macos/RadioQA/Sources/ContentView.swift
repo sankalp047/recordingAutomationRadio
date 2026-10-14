@@ -75,14 +75,22 @@ struct ContentView: View {
                 }
             }
 
-            Section("FunAsia admin") {
-                NavigationLink(value: Screen.adminDashboard) {
-                    Label(Screen.adminDashboard.title, systemImage: Screen.adminDashboard.icon)
-                        .font(.system(size: 13))
+            if admin.isReady {
+                Section("FunAsia admin") {
+                    ForEach(AdminSidebar.visible(AdminSidebar.main, role: admin.role)) { item in
+                        adminLink(item)
+                    }
                 }
-                ForEach(AdminCollections.content) { spec in
-                    NavigationLink(value: Screen.adminCollection(spec.key)) {
-                        Label(spec.title, systemImage: spec.icon).font(.system(size: 13))
+                let bf = AdminSidebar.visible(AdminSidebar.bigfan, role: admin.role)
+                if !bf.isEmpty {
+                    Section("BigFan app") {
+                        ForEach(bf) { item in adminLink(item) }
+                    }
+                }
+            } else {
+                Section("FunAsia admin") {
+                    NavigationLink(value: Screen.adminDashboard) {
+                        Label("Sign in", systemImage: "lock").font(.system(size: 13))
                     }
                 }
             }
@@ -130,6 +138,25 @@ struct ContentView: View {
         }
     }
 
+    /// A sidebar row. Screens that cannot work yet are dimmed and say why on
+    /// hover, rather than being hidden — the map should match the real admin.
+    @ViewBuilder
+    private func adminLink(_ item: AdminItem) -> some View {
+        NavigationLink(value: Screen.admin(item.area)) {
+            Label {
+                HStack(spacing: 5) {
+                    Text(item.title).font(.system(size: 13))
+                    if !item.isReady {
+                        Image(systemName: "clock").font(.system(size: 9))
+                            .foregroundStyle(.tertiary)
+                    }
+                }
+            } icon: { Image(systemName: item.icon) }
+        }
+        .opacity(item.isReady ? 1 : 0.55)
+        .help(item.blockedBy?.rawValue ?? item.title)
+    }
+
     // MARK: date bar
 
     private var dateBar: some View {
@@ -172,13 +199,8 @@ struct ContentView: View {
         switch screen {
         case .adminDashboard:
             AdminGate(session: admin) { AdminDashboard(session: admin) }
-        case .adminCollection(let key):
-            if let spec = AdminCollections.content.first(where: { $0.key == key }) {
-                AdminGate(session: admin) { AdminCollectionView(spec: spec) }
-            } else {
-                EmptyState(symbol: "questionmark.folder", title: "Unknown section",
-                           message: "No admin screen is defined for “\(key)”.")
-            }
+        case .admin(let area):
+            AdminGate(session: admin) { AdminAreaView(area: area, session: admin) }
         default:
             EmptyView()
         }

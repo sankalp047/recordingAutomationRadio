@@ -122,9 +122,10 @@ struct AdminDashboard: View {
 
     private func load() async {
         loading = true
+        let s = session
         await withTaskGroup(of: (String, Int?).self) { group in
             for c in AdminCollections.dashboardCounts {
-                group.addTask { (c.collection, await AdminRepo.count(c.collection)) }
+                group.addTask { (c.collection, await AdminRepo.count(c.collection, session: s)) }
             }
             for await (k, v) in group { counts[k] = v }
         }
@@ -142,9 +143,9 @@ struct AdminCollectionView: View {
     @State private var creating = false
     @State private var confirmDelete: AdminRepo.Row?
 
-    init(spec: CollectionSpec) {
+    init(spec: CollectionSpec, session: AdminSession) {
         self.spec = spec
-        _repo = State(initialValue: AdminRepo(spec: spec))
+        _repo = State(initialValue: AdminRepo(spec: spec, session: session))
     }
 
     private var filtered: [AdminRepo.Row] {
