@@ -14,6 +14,14 @@ struct AdminAreaView: View {
             AdminDashboard(session: session)
         } else if let spec = AdminSidebar.spec(for: area) {
             AdminCollectionView(spec: spec, session: session)
+        } else if case .custom("galleries") = area {
+            GalleriesScreen(session: session)
+        } else if case .custom("marketplace") = area {
+            MarketplaceScreen(session: session)
+        } else if case .custom("podcasts") = area {
+            PodcastsScreen(session: session)
+        } else if case let .bigfan(key) = area, let spec = BigfanCatalog.spec(key) {
+            BigfanCollectionView(spec: spec, session: session)
         } else {
             notBuilt
         }

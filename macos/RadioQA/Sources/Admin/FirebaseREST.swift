@@ -208,24 +208,48 @@ enum FirebaseREST {
             case "doubleValue":    out[k] = (raw as? NSNumber)?.doubleValue ?? 0
             case "timestampValue": out[k] = raw as? String ?? ""
             case "nullValue":      out[k] = ""
-            default:               continue   // maps and arrays are not edited here
+            case "arrayValue":
+                // galleries store [{url, caption}], marketplace stores [String]
+                let vals = (raw as? [String: Any])?["values"] as? [Any] ?? []
+                out[k] = vals.compactMap { unwrap($0) }
+            case "mapValue":
+                out[k] = decode((raw as? [String: Any])?["fields"] as? [String: Any] ?? [:])
+            default:               continue
             }
         }
         return out
     }
 
-    static func encode(_ fields: [String: Any]) -> [String: Any] {
-        var out: [String: Any] = [:]
-        for (k, v) in fields {
-            switch v {
-            case let b as Bool:   out[k] = ["booleanValue": b]
-            case let d as Double:
-                out[k] = d == d.rounded() ? ["integerValue": String(Int(d))] : ["doubleValue": d]
-            case let s as String: out[k] = ["stringValue": s]
-            default:              out[k] = ["stringValue": String(describing: v)]
-            }
+    /// One Firestore-typed value back to a plain Swift value.
+    private static func unwrap(_ any: Any) -> Any? {
+        guard let w = any as? [String: Any], let (kind, raw) = w.first else { return nil }
+        switch kind {
+        case "stringValue":  return raw as? String ?? ""
+        case "booleanValue": return raw as? Bool ?? false
+        case "integerValue": return Double(raw as? String ?? "0") ?? 0
+        case "doubleValue":  return (raw as? NSNumber)?.doubleValue ?? 0
+        case "mapValue":     return decode((raw as? [String: Any])?["fields"] as? [String: Any] ?? [:])
+        case "arrayValue":
+            let vals = (raw as? [String: Any])?["values"] as? [Any] ?? []
+            return vals.compactMap { unwrap($0) }
+        default:             return nil
         }
-        return out
+    }
+
+    private static func wrap(_ v: Any) -> [String: Any] {
+        switch v {
+        case let b as Bool:   return ["booleanValue": b]
+        case let d as Double: return d == d.rounded() ? ["integerValue": String(Int(d))] : ["doubleValue": d]
+        case let i as Int:    return ["integerValue": String(i)]
+        case let s as String: return ["stringValue": s]
+        case let a as [Any]:  return ["arrayValue": ["values": a.map { wrap($0) }]]
+        case let m as [String: Any]: return ["mapValue": ["fields": m.mapValues { wrap($0) }]]
+        default:              return ["stringValue": String(describing: v)]
+        }
+    }
+
+    static func encode(_ fields: [String: Any]) -> [String: Any] {
+        fields.mapValues { wrap($0) }
     }
 
     // MARK: transport

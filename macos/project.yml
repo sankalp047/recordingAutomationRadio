@@ -26,6 +26,10 @@ targets:
         CFBundleShortVersionString: "1.0"
         CFBundleVersion: "1"
         LSMinimumSystemVersion: "14.0"
+        # The admin backend runs on http://localhost:3001 during development.
+        # Production (funasia.net) is HTTPS and unaffected by this.
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
         NSHumanReadableCopyright: ""
         # The API is HTTPS, so no ATS exception is needed.
     entitlements:

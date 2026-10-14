@@ -9,6 +9,7 @@ struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var url = ""
+    @State private var apiBase = AdminAPI.baseString
     @State private var testing = false
     @State private var result: String?
     @State private var ok = false
@@ -57,6 +58,18 @@ struct SettingsView: View {
                     }
                     Button("Check connection") { Task { await test() } }
                         .controlSize(.small).disabled(testing || url.isEmpty)
+
+                    Divider().padding(.vertical, 4)
+                    Text("Admin backend").font(.system(size: 11, weight: .medium))
+                    Picker("", selection: $apiBase) {
+                        Text("funasia.net (live)").tag(AdminAPI.production)
+                        Text("localhost:3001 (local server)").tag(AdminAPI.localDev)
+                    }
+                    .labelsHidden().pickerStyle(.radioGroup)
+                    Text("BigFan, Inbox, Campaigns and the Popup go through this. "
+                       + "The local option needs the old admin server running.")
+                        .font(.system(size: 10)).foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
                 .padding(.top, 8)
             }
@@ -69,13 +82,14 @@ struct SettingsView: View {
                 Button("Cancel") { dismiss() }
                 Button("Done") {
                     model.baseURL = url.trimmingCharacters(in: .whitespacesAndNewlines)
+                    UserDefaults.standard.set(apiBase, forKey: AdminAPI.baseKey)
                     onSave(); dismiss()
                 }
                 .keyboardShortcut(.defaultAction).disabled(url.isEmpty)
             }
         }
         .padding(22)
-        .frame(width: 460, height: 350)
+        .frame(width: 470, height: 470)
         .onAppear { url = model.baseURL }
     }
 

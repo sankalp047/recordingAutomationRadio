@@ -1,0 +1,859 @@
+{
+  "_comment": "Generated from src/lib/server/bigfanCollections.ts (single source of truth for the BigFan admin). Drives /api/admin/bigfan/{key}. Do not edit by hand; regenerate.",
+  "generatedAt": "2026-10-14",
+  "collections": {
+    "stations": {
+      "key": "stations",
+      "collectionName": "stations",
+      "title": "Stations",
+      "searchField": "name",
+      "sortField": "sortOrder",
+      "fields": [
+        {
+          "name": "logoUrl",
+          "label": "Logo",
+          "type": "image"
+        },
+        {
+          "name": "name",
+          "label": "Name",
+          "type": "text",
+          "required": true
+        },
+        {
+          "name": "city",
+          "label": "City",
+          "type": "text",
+          "required": true
+        },
+        {
+          "name": "country",
+          "label": "Country",
+          "type": "text",
+          "required": true
+        },
+        {
+          "name": "isActive",
+          "label": "Active",
+          "type": "checkbox",
+          "defaultValue": true
+        },
+        {
+          "name": "streamUrl",
+          "label": "Stream URL",
+          "type": "url",
+          "required": true
+        },
+        {
+          "name": "state",
+          "label": "State",
+          "type": "text"
+        },
+        {
+          "name": "latitude",
+          "label": "Latitude",
+          "type": "number",
+          "required": true
+        },
+        {
+          "name": "longitude",
+          "label": "Longitude",
+          "type": "number",
+          "required": true
+        },
+        {
+          "name": "languages",
+          "label": "Languages",
+          "type": "stringArray",
+          "placeholder": "Hindi, Telugu, Tamil"
+        },
+        {
+          "name": "genres",
+          "label": "Genres",
+          "type": "stringArray",
+          "placeholder": "Bollywood, Talk, News"
+        },
+        {
+          "name": "sortOrder",
+          "label": "Sort Order",
+          "type": "number",
+          "defaultValue": 0
+        },
+        {
+          "name": "websiteUrl",
+          "label": "Website URL",
+          "type": "url"
+        },
+        {
+          "name": "socialLinks",
+          "label": "Social Links",
+          "type": "socialLinks"
+        },
+        {
+          "name": "description",
+          "label": "Description",
+          "type": "textarea"
+        }
+      ]
+    },
+    "ads": {
+      "key": "ads",
+      "collectionName": "sponsored_ads",
+      "title": "Sponsored Ads",
+      "searchField": "title",
+      "sortField": "priority",
+      "sortDirection": "desc",
+      "fields": [
+        {
+          "name": "imageUrl",
+          "label": "Image",
+          "type": "image",
+          "required": true
+        },
+        {
+          "name": "title",
+          "label": "Title",
+          "type": "text"
+        },
+        {
+          "name": "position",
+          "label": "Position",
+          "type": "text",
+          "defaultValue": "home_banner",
+          "placeholder": "home_banner"
+        },
+        {
+          "name": "isActive",
+          "label": "Active",
+          "type": "checkbox",
+          "defaultValue": true
+        },
+        {
+          "name": "priority",
+          "label": "Priority",
+          "type": "number",
+          "defaultValue": 0
+        },
+        {
+          "name": "clickUrl",
+          "label": "Click URL",
+          "type": "url",
+          "required": true
+        },
+        {
+          "name": "geoType",
+          "label": "Geo Type",
+          "type": "select",
+          "defaultValue": "global",
+          "options": [
+            {
+              "value": "global",
+              "label": "Global"
+            },
+            {
+              "value": "city",
+              "label": "City"
+            },
+            {
+              "value": "region",
+              "label": "Region"
+            }
+          ]
+        },
+        {
+          "name": "cities",
+          "label": "Cities",
+          "type": "stringArray",
+          "placeholder": "Dallas, Houston",
+          "showIf": {
+            "field": "geoType",
+            "value": "city"
+          }
+        },
+        {
+          "name": "regions",
+          "label": "Regions",
+          "type": "multiSelect",
+          "showIf": {
+            "field": "geoType",
+            "value": "region"
+          },
+          "options": [
+            {
+              "value": "USA",
+              "label": "USA"
+            },
+            {
+              "value": "UAE",
+              "label": "UAE"
+            }
+          ]
+        },
+        {
+          "name": "startDate",
+          "label": "Start Date",
+          "type": "date"
+        },
+        {
+          "name": "endDate",
+          "label": "End Date",
+          "type": "date"
+        },
+        {
+          "name": "description",
+          "label": "Description",
+          "type": "textarea"
+        }
+      ]
+    },
+    "rewards": {
+      "key": "rewards",
+      "collectionName": "reward_offers",
+      "title": "Reward Offers",
+      "searchField": "title",
+      "fields": [
+        {
+          "name": "imageUrl",
+          "label": "Image",
+          "type": "image"
+        },
+        {
+          "name": "title",
+          "label": "Title",
+          "type": "text",
+          "required": true
+        },
+        {
+          "name": "clientName",
+          "label": "Client Name",
+          "type": "text",
+          "required": true
+        },
+        {
+          "name": "type",
+          "label": "Type",
+          "type": "select",
+          "defaultValue": "instant",
+          "options": [
+            {
+              "value": "instant",
+              "label": "Instant"
+            },
+            {
+              "value": "raffle",
+              "label": "Raffle"
+            }
+          ]
+        },
+        {
+          "name": "pointsCost",
+          "label": "Points Cost",
+          "type": "number",
+          "required": true,
+          "defaultValue": 0
+        },
+        {
+          "name": "isActive",
+          "label": "Active",
+          "type": "checkbox",
+          "defaultValue": true
+        },
+        {
+          "name": "totalSeats",
+          "label": "Total Seats (instant)",
+          "type": "number"
+        },
+        {
+          "name": "remainingSeats",
+          "label": "Remaining Seats (instant)",
+          "type": "number"
+        },
+        {
+          "name": "startDate",
+          "label": "Start Date",
+          "type": "date"
+        },
+        {
+          "name": "endDate",
+          "label": "End Date",
+          "type": "date"
+        },
+        {
+          "name": "raffleDrawDate",
+          "label": "Raffle Draw Date (raffle)",
+          "type": "date"
+        },
+        {
+          "name": "description",
+          "label": "Description",
+          "type": "textarea"
+        }
+      ]
+    },
+    "reward-claims": {
+      "key": "reward-claims",
+      "collectionName": "reward_claims",
+      "title": "Reward Claims",
+      "readonly": true,
+      "patchableFields": [
+        "status"
+      ],
+      "fields": []
+    },
+    "redeem-codes": {
+      "key": "redeem-codes",
+      "collectionName": "redeem_codes",
+      "title": "Redeem Codes",
+      "searchField": "code",
+      "fields": [
+        {
+          "name": "code",
+          "label": "Code",
+          "type": "text",
+          "required": true,
+          "placeholder": "e.g. FUNASIA100"
+        },
+        {
+          "name": "points",
+          "label": "Points",
+          "type": "number",
+          "required": true,
+          "defaultValue": 0
+        },
+        {
+          "name": "sponsorName",
+          "label": "Sponsor Name",
+          "type": "text"
+        },
+        {
+          "name": "sponsorImageUrl",
+          "label": "Sponsor Image",
+          "type": "image"
+        },
+        {
+          "name": "isActive",
+          "label": "Active",
+          "type": "checkbox",
+          "defaultValue": true
+        },
+        {
+          "name": "maxRedemptions",
+          "label": "Max Redemptions",
+          "type": "number",
+          "defaultValue": 0,
+          "placeholder": "0 = unlimited"
+        },
+        {
+          "name": "currentRedemptions",
+          "label": "Current Redemptions (auto-incremented by app)",
+          "type": "number",
+          "defaultValue": 0
+        },
+        {
+          "name": "expiresAt",
+          "label": "Expires At (optional)",
+          "type": "date"
+        }
+      ]
+    },
+    "podcasts": {
+      "key": "podcasts",
+      "collectionName": "podcasts",
+      "title": "Podcasts",
+      "searchField": "title",
+      "fields": [
+        {
+          "name": "imageUrl",
+          "label": "Image",
+          "type": "image"
+        },
+        {
+          "name": "title",
+          "label": "Title",
+          "type": "text",
+          "required": true
+        },
+        {
+          "name": "author",
+          "label": "Author",
+          "type": "text"
+        },
+        {
+          "name": "category",
+          "label": "Category",
+          "type": "text"
+        },
+        {
+          "name": "feedUrl",
+          "label": "Feed URL",
+          "type": "url",
+          "required": true
+        },
+        {
+          "name": "language",
+          "label": "Language",
+          "type": "text"
+        },
+        {
+          "name": "stationId",
+          "label": "Station",
+          "type": "stationSelect"
+        },
+        {
+          "name": "stationName",
+          "label": "Station Name",
+          "type": "text"
+        },
+        {
+          "name": "description",
+          "label": "Description",
+          "type": "textarea"
+        }
+      ]
+    },
+    "interviews": {
+      "key": "interviews",
+      "collectionName": "interviews",
+      "title": "Interviews",
+      "searchField": "title",
+      "sortField": "publishedAt",
+      "sortDirection": "desc",
+      "fields": [
+        {
+          "name": "imageUrl",
+          "label": "Image",
+          "type": "image"
+        },
+        {
+          "name": "title",
+          "label": "Title",
+          "type": "text",
+          "required": true
+        },
+        {
+          "name": "guestName",
+          "label": "Guest Name",
+          "type": "text"
+        },
+        {
+          "name": "hostName",
+          "label": "Host Name",
+          "type": "text"
+        },
+        {
+          "name": "publishedAt",
+          "label": "Published At",
+          "type": "date"
+        },
+        {
+          "name": "audioUrl",
+          "label": "Audio URL",
+          "type": "url",
+          "required": true
+        },
+        {
+          "name": "duration",
+          "label": "Duration (seconds)",
+          "type": "number"
+        },
+        {
+          "name": "stationId",
+          "label": "Station",
+          "type": "stationSelect"
+        },
+        {
+          "name": "location",
+          "label": "Location",
+          "type": "select",
+          "defaultValue": "usa",
+          "options": [
+            {
+              "value": "usa",
+              "label": "USA"
+            },
+            {
+              "value": "uae",
+              "label": "UAE"
+            }
+          ]
+        },
+        {
+          "name": "tags",
+          "label": "Tags",
+          "type": "stringArray",
+          "placeholder": "music, culture, film"
+        },
+        {
+          "name": "description",
+          "label": "Description",
+          "type": "textarea"
+        }
+      ]
+    },
+    "featured-banners": {
+      "key": "featured-banners",
+      "collectionName": "featured_banners",
+      "title": "Featured Banners",
+      "searchField": "title",
+      "sortField": "sortOrder",
+      "fields": [
+        {
+          "name": "imageUrl",
+          "label": "Banner Image",
+          "type": "image",
+          "required": true
+        },
+        {
+          "name": "region",
+          "label": "Region",
+          "type": "select",
+          "required": true,
+          "defaultValue": "ALL",
+          "options": [
+            {
+              "value": "USA",
+              "label": "USA"
+            },
+            {
+              "value": "UAE",
+              "label": "UAE"
+            },
+            {
+              "value": "ALL",
+              "label": "ALL"
+            }
+          ]
+        },
+        {
+          "name": "contentType",
+          "label": "Content Type",
+          "type": "select",
+          "required": true,
+          "options": [
+            {
+              "value": "station",
+              "label": "Station"
+            },
+            {
+              "value": "interview",
+              "label": "Interview"
+            }
+          ]
+        },
+        {
+          "name": "contentId",
+          "label": "Content",
+          "type": "contentSelect",
+          "required": true,
+          "dependsOn": "contentType"
+        },
+        {
+          "name": "title",
+          "label": "Title (overlay text, optional)",
+          "type": "text"
+        },
+        {
+          "name": "subtitle",
+          "label": "Subtitle (optional)",
+          "type": "text"
+        },
+        {
+          "name": "stationLabel",
+          "label": "Station Label (top-right, bold — free text, blank = falls back to real station name)",
+          "type": "text",
+          "placeholder": "e.g. Bollywood FM"
+        },
+        {
+          "name": "tag",
+          "label": "Tag (top-right, under Station Label — genre/type, blank = hidden)",
+          "type": "text",
+          "placeholder": "e.g. Bollywood, Talk, News, Punjabi"
+        },
+        {
+          "name": "showLiveBadge",
+          "label": "Show \"LIVE\" Badge (top-left)",
+          "type": "checkbox",
+          "defaultValue": true
+        },
+        {
+          "name": "isActive",
+          "label": "Active",
+          "type": "checkbox",
+          "defaultValue": true
+        },
+        {
+          "name": "sortOrder",
+          "label": "Sort Order (tiebreaker, lowest wins)",
+          "type": "number",
+          "defaultValue": 0
+        }
+      ]
+    },
+    "trending": {
+      "key": "trending",
+      "collectionName": "trending",
+      "title": "Trending",
+      "searchField": "title",
+      "sortField": "rank",
+      "fields": [
+        {
+          "name": "imageUrl",
+          "label": "Image",
+          "type": "image"
+        },
+        {
+          "name": "title",
+          "label": "Title",
+          "type": "text",
+          "required": true
+        },
+        {
+          "name": "rank",
+          "label": "Rank",
+          "type": "number",
+          "required": true,
+          "defaultValue": 1
+        },
+        {
+          "name": "type",
+          "label": "Type",
+          "type": "text"
+        },
+        {
+          "name": "isActive",
+          "label": "Active",
+          "type": "checkbox",
+          "defaultValue": true
+        },
+        {
+          "name": "actionUrl",
+          "label": "Action URL",
+          "type": "url"
+        },
+        {
+          "name": "startDate",
+          "label": "Start Date",
+          "type": "date"
+        },
+        {
+          "name": "endDate",
+          "label": "End Date",
+          "type": "date"
+        },
+        {
+          "name": "description",
+          "label": "Description",
+          "type": "textarea"
+        }
+      ]
+    },
+    "top-podcasts": {
+      "key": "top-podcasts",
+      "collectionName": "top_podcasts",
+      "title": "Top Podcasts",
+      "searchField": "title",
+      "sortField": "rank",
+      "fields": [
+        {
+          "name": "imageUrl",
+          "label": "Image",
+          "type": "image"
+        },
+        {
+          "name": "title",
+          "label": "Title",
+          "type": "text",
+          "required": true
+        },
+        {
+          "name": "rank",
+          "label": "Rank",
+          "type": "number",
+          "required": true,
+          "defaultValue": 1
+        },
+        {
+          "name": "category",
+          "label": "Category",
+          "type": "text"
+        },
+        {
+          "name": "feedUrl",
+          "label": "Feed URL",
+          "type": "url",
+          "required": true
+        }
+      ]
+    },
+    "trivia-questions": {
+      "key": "trivia-questions",
+      "collectionName": "trivia_questions",
+      "title": "Trivia Questions",
+      "searchField": "question",
+      "sortField": "closesAt",
+      "sortDirection": "desc",
+      "fields": [
+        {
+          "name": "stationId",
+          "label": "Station",
+          "type": "stationSelect",
+          "required": true
+        },
+        {
+          "name": "question",
+          "label": "Question",
+          "type": "textarea",
+          "required": true
+        },
+        {
+          "name": "options",
+          "label": "Options (2-4, comma-separated)",
+          "type": "stringArray",
+          "required": true,
+          "placeholder": "Option A, Option B, Option C, Option D"
+        },
+        {
+          "name": "correctOptionIndex",
+          "label": "Correct Option Position (0 = first option, 1 = second, ...)",
+          "type": "number",
+          "required": true,
+          "defaultValue": 0
+        },
+        {
+          "name": "region",
+          "label": "Region",
+          "type": "select",
+          "defaultValue": "ALL",
+          "options": [
+            {
+              "value": "USA",
+              "label": "USA"
+            },
+            {
+              "value": "UAE",
+              "label": "UAE"
+            },
+            {
+              "value": "ALL",
+              "label": "ALL"
+            }
+          ]
+        },
+        {
+          "name": "opensAt",
+          "label": "Opens At",
+          "type": "datetime",
+          "required": true
+        },
+        {
+          "name": "closesAt",
+          "label": "Closes At",
+          "type": "datetime",
+          "required": true
+        },
+        {
+          "name": "isActive",
+          "label": "Active",
+          "type": "checkbox",
+          "defaultValue": true
+        },
+        {
+          "name": "winnerMethod",
+          "label": "Winner Method",
+          "type": "select",
+          "defaultValue": "firstCorrect",
+          "options": [
+            {
+              "value": "firstCorrect",
+              "label": "First Correct Answer Wins"
+            },
+            {
+              "value": "randomDraw",
+              "label": "Random Draw Among Correct Answers"
+            }
+          ]
+        },
+        {
+          "name": "prizeTitle",
+          "label": "Prize Title",
+          "type": "text",
+          "required": true
+        },
+        {
+          "name": "prizeDescription",
+          "label": "Prize Description",
+          "type": "textarea"
+        },
+        {
+          "name": "prizeImageUrl",
+          "label": "Prize Image",
+          "type": "image"
+        },
+        {
+          "name": "winnerUserId",
+          "label": "Winner User ID (auto-set by app, or by Pick Random Winner)",
+          "type": "text"
+        },
+        {
+          "name": "winnerUserEmail",
+          "label": "Winner Email (auto-set by app, or by Pick Random Winner)",
+          "type": "text"
+        },
+        {
+          "name": "winnerAnnouncedAt",
+          "label": "Winner Announced At",
+          "type": "datetime"
+        },
+        {
+          "name": "winnerCode",
+          "label": "Winner Code",
+          "type": "text"
+        }
+      ]
+    },
+    "trivia-answers": {
+      "key": "trivia-answers",
+      "collectionName": "trivia_answers",
+      "title": "Trivia Answers",
+      "searchField": "userEmail",
+      "readonly": true,
+      "fields": [
+        {
+          "name": "questionId",
+          "label": "Question ID",
+          "type": "text"
+        },
+        {
+          "name": "userEmail",
+          "label": "User Email",
+          "type": "text"
+        },
+        {
+          "name": "stationId",
+          "label": "Station",
+          "type": "text"
+        },
+        {
+          "name": "isCorrect",
+          "label": "Correct",
+          "type": "checkbox"
+        },
+        {
+          "name": "submittedAt",
+          "label": "Submitted At",
+          "type": "datetime"
+        },
+        {
+          "name": "userId",
+          "label": "User ID",
+          "type": "text"
+        },
+        {
+          "name": "selectedOptionIndex",
+          "label": "Selected Option",
+          "type": "number"
+        }
+      ]
+    }
+  }
+}
