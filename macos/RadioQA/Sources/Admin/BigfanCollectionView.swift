@@ -242,12 +242,6 @@ struct BigfanCollectionView: View {
             .padding(16)
             Divider()
 
-            if let e = model.error {
-                Label(e, systemImage: "exclamationmark.triangle.fill")
-                    .font(.system(size: 12)).foregroundStyle(.orange)
-                    .fixedSize(horizontal: false, vertical: true).padding(12)
-            }
-
             if spec.isReadOnly && spec.patchOnly.isEmpty {
                 Label("This list is written by the mobile app and cannot be edited here.",
                       systemImage: "info.circle")
@@ -255,7 +249,23 @@ struct BigfanCollectionView: View {
                     .padding(.horizontal, 16).padding(.bottom, 6)
             }
 
-            if model.items.isEmpty && !model.loading && model.error == nil {
+            if let e = model.error {
+                // A failure fills the pane. Previously it was one orange line
+                // above an empty list, which looked like nothing had loaded.
+                EmptyState(
+                    symbol: isOffline(e) ? "bolt.horizontal.circle" : "exclamationmark.triangle",
+                    title: isOffline(e) ? "Can’t reach the admin backend" : "Could not load",
+                    message: e,
+                    action: isOffline(e) && AdminAPI.baseString != AdminAPI.localDev
+                        ? ("Use the local server instead", {
+                            UserDefaults.standard.set(AdminAPI.localDev, forKey: AdminAPI.baseKey)
+                            Task { await model.load() }
+                          })
+                        : ("Try again", { Task { await model.load() } }))
+            } else if model.loading && model.items.isEmpty {
+                ProgressView("Loading \(spec.title.lowercased())…")
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if model.items.isEmpty {
                 EmptyState(symbol: "tray", title: "Nothing here yet",
                            message: "No \(spec.title.lowercased()) exist in the BigFan app.")
             } else {
@@ -343,6 +353,10 @@ struct BigfanCollectionView: View {
             }
         }
         .padding(.vertical, 3)
+    }
+
+    private func isOffline(_ e: String) -> Bool {
+        e.localizedCaseInsensitiveContains("not reachable")
     }
 
     /// For collections with no field config, show whatever the data has.

@@ -5,6 +5,11 @@ struct AdminAreaView: View {
     let area: AdminArea
     let session: AdminSession
 
+    private var areaKey: String {
+        if case let .bigfan(k) = area { return k }
+        return ""
+    }
+
     private var item: AdminItem? {
         (AdminSidebar.main + AdminSidebar.bigfan).first { $0.area == area }
     }
