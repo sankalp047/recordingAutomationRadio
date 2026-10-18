@@ -82,7 +82,7 @@ enum AdminSidebar {
               superadminOnly: true, blockedBy: .backend),
     ]
 
-    /// Items 19–32. Every one reads through the admin backend, because BigFan
+    /// Items 19–33. Every one reads through the admin backend, because BigFan
     /// is a second Firebase project reached with its own service account.
     static let bigfan: [AdminItem] = [
         .init(area: .bigfan("analytics"), title: "Analytics", icon: "chart.bar",
@@ -96,6 +96,8 @@ enum AdminSidebar {
         .init(area: .bigfan("ads"), title: "BigFan Ads", icon: "megaphone",
               superadminOnly: true, blockedBy: nil),
         .init(area: .bigfan("rewards"), title: "Reward Offers", icon: "gift",
+              superadminOnly: true, blockedBy: nil),
+        .init(area: .bigfan("deal-places"), title: "Restaurants & Deals", icon: "fork.knife",
               superadminOnly: true, blockedBy: nil),
         .init(area: .bigfan("reward-claims"), title: "Reward Claims", icon: "ticket",
               superadminOnly: true, blockedBy: nil),
