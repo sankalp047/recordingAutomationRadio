@@ -666,6 +666,10 @@
             {
               "value": "interview",
               "label": "Interview"
+            },
+            {
+              "value": "link",
+              "label": "External Link"
             }
           ]
         },
@@ -675,6 +679,17 @@
           "type": "contentSelect",
           "required": true,
           "dependsOn": "contentType"
+        },
+        {
+          "name": "linkUrl",
+          "label": "Link URL (opens in the browser when tapped)",
+          "type": "url",
+          "required": true,
+          "placeholder": "https://…",
+          "showIf": {
+            "field": "contentType",
+            "value": "link"
+          }
         },
         {
           "name": "title",

@@ -62,7 +62,7 @@ final class BigfanModel {
         // The server checks required fields on create and reports labels;
         // check here too so the user isn't round-tripped for a blank box.
         let missing = spec.fields.filter { f in
-            guard f.isRequired, visible(f, in: values) else { return false }
+            guard f.isRequired, isApplicable(f, in: values) else { return false }
             return isEmpty(values[f.name])
         }
         if id == nil, !missing.isEmpty {
@@ -89,8 +89,8 @@ final class BigfanModel {
     private func payload(_ values: [String: Any]) -> [String: Any] {
         var out: [String: Any] = [:]
         for f in spec.fields {
-            if !visible(f, in: values) {
-                // hidden by showIf: still sent, cleared
+            if !isApplicable(f, in: values) {
+                // does not apply to this record: still sent, cleared
                 out[f.name] = (f.type == "stringArray" || f.type == "multiSelect") ? [String]() : ""
                 continue
             }
@@ -162,9 +162,26 @@ final class BigfanModel {
         }
     }
 
-    func visible(_ f: BigfanField, in values: [String: Any]) -> Bool {
-        guard let s = f.showIf else { return true }
-        return (values[s.field] as? String) == s.value
+    /// The content types a `contentSelect` can actually offer a choice from.
+    private static let selectableContent = ["station", "interview"]
+
+    /// Whether a field applies to this record: it is shown in the form, and
+    /// required only when it applies. Mirrors the backend's
+    /// `isFieldApplicable`, so the form and the validator agree on what a
+    /// record needs rather than the server rejecting what the form allowed.
+    ///
+    /// A `showIf` field applies only while its condition holds. A
+    /// `contentSelect` stops applying once its controlling field picks
+    /// something it cannot offer a choice from — an External Link banner
+    /// needs a Link URL, not a Content. An empty controlling value still
+    /// applies, so the "pick a content type first" hint survives.
+    func isApplicable(_ f: BigfanField, in values: [String: Any]) -> Bool {
+        if let s = f.showIf, (values[s.field] as? String) != s.value { return false }
+        if f.type == "contentSelect", let dep = f.dependsOn {
+            let controlling = values[dep] as? String ?? ""
+            if !controlling.isEmpty, !Self.selectableContent.contains(controlling) { return false }
+        }
+        return true
     }
 
     private func isEmpty(_ v: Any?) -> Bool {

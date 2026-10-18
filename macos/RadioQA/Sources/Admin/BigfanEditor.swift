@@ -26,7 +26,7 @@ struct BigfanEditor: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
                     ForEach(spec.fields) { f in
-                        if model.visible(f, in: target.values) {
+                        if model.isApplicable(f, in: target.values) {
                             control(for: f)
                         }
                     }
