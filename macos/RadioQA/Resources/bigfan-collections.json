@@ -1,6 +1,6 @@
 {
   "_comment": "Generated from src/lib/server/bigfanCollections.ts (single source of truth for the BigFan admin). Drives /api/admin/bigfan/{key}. Do not edit by hand; regenerate.",
-  "generatedAt": "2026-10-14",
+  "generatedAt": "2026-10-18",
   "collections": {
     "stations": {
       "key": "stations",
@@ -287,6 +287,135 @@
           "name": "description",
           "label": "Description",
           "type": "textarea"
+        }
+      ]
+    },
+    "deal-places": {
+      "key": "deal-places",
+      "collectionName": "deal_places",
+      "title": "Restaurants & Deals",
+      "searchField": "name",
+      "sortField": "sortOrder",
+      "fields": [
+        {
+          "name": "imageUrl",
+          "label": "Image",
+          "type": "image"
+        },
+        {
+          "name": "name",
+          "label": "Name",
+          "type": "text",
+          "required": true,
+          "placeholder": "Tandoori Flame"
+        },
+        {
+          "name": "category",
+          "label": "Category",
+          "type": "select",
+          "defaultValue": "Restaurant",
+          "options": [
+            {
+              "value": "Restaurant",
+              "label": "Restaurant"
+            },
+            {
+              "value": "Cafe & Sweets",
+              "label": "Cafe & Sweets"
+            },
+            {
+              "value": "Grocery",
+              "label": "Grocery"
+            },
+            {
+              "value": "Business",
+              "label": "Other business"
+            }
+          ]
+        },
+        {
+          "name": "cuisine",
+          "label": "Cuisine",
+          "type": "text",
+          "placeholder": "North Indian"
+        },
+        {
+          "name": "address",
+          "label": "Address",
+          "type": "text",
+          "required": true,
+          "placeholder": "123 Main St, Plano, TX 75074"
+        },
+        {
+          "name": "phone",
+          "label": "Phone",
+          "type": "text",
+          "placeholder": "+1 214 555 0100"
+        },
+        {
+          "name": "bookingUrl",
+          "label": "Booking Link",
+          "type": "url",
+          "placeholder": "https://… (OpenTable, Yelp, own site)"
+        },
+        {
+          "name": "websiteUrl",
+          "label": "Website",
+          "type": "url"
+        },
+        {
+          "name": "deals",
+          "label": "Deals (one per line)",
+          "type": "textarea",
+          "placeholder": "10% off the lunch buffet\nFree dessert on Tuesdays"
+        },
+        {
+          "name": "description",
+          "label": "Description",
+          "type": "textarea"
+        },
+        {
+          "name": "region",
+          "label": "Region",
+          "type": "select",
+          "required": true,
+          "defaultValue": "USA",
+          "options": [
+            {
+              "value": "USA",
+              "label": "USA"
+            },
+            {
+              "value": "UAE",
+              "label": "UAE"
+            },
+            {
+              "value": "ALL",
+              "label": "ALL"
+            }
+          ]
+        },
+        {
+          "name": "latitude",
+          "label": "Latitude (optional)",
+          "type": "number"
+        },
+        {
+          "name": "longitude",
+          "label": "Longitude (optional)",
+          "type": "number"
+        },
+        {
+          "name": "isActive",
+          "label": "Active",
+          "type": "checkbox",
+          "defaultValue": true
+        },
+        {
+          "name": "sortOrder",
+          "label": "Sort Order",
+          "type": "number",
+          "defaultValue": 0
         }
       ]
     },
